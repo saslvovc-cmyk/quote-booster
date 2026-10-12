@@ -2,6 +2,7 @@
 QUOTE BOOSTER PRO - Cloud Web Application
 Progettato per girare online 24/7 su Render o qualsiasi server cloud.
 Accessibile da smartphone (Android, iPhone) senza bisogno del PC acceso.
+Include Palinsesto Completo di Oggi con selezione a 1 tap (⭐ Aggiungi ai Preferiti).
 """
 
 import os
@@ -17,19 +18,21 @@ import re
 import requests
 from flask import Flask, jsonify, request, Response
 
-# Decomprime il database se necessario
 DB_FILE = "mega_db.sqlite"
 GZ_FILE = "mega_db.sqlite.gz"
 FAV_FILE = "preferiti_flashscore.json"
 
+# Decomprime il database se necessario all'avvio
 if not os.path.exists(DB_FILE) and os.path.exists(GZ_FILE):
     print("Decompressione database storico in corso...")
-    with gzip.open(GZ_FILE, "rb") as f_in:
-        with open(DB_FILE, "wb") as f_out:
-            f_out.write(f_in.read())
-    print("Database decompresso con successo!")
+    try:
+        with gzip.open(GZ_FILE, "rb") as f_in:
+            with open(DB_FILE, "wb") as f_out:
+                f_out.write(f_in.read())
+        print("Database decompresso con successo!")
+    except Exception as e:
+        print("Errore estrazione database:", e)
 
-# Parametri e costanti
 MIN_N_CALCIO = 40
 MIN_N_TENNIS = 60
 SEP1 = chr(172)
@@ -266,6 +269,76 @@ def report_tennis(r, q):
 # =====================================================================
 class FlashscorePalinsestoService:
     @staticmethod
+    def get_tournament_sort_key(sport_id, league_name, feed_idx):
+        lg = (league_name or '').upper().strip()
+        is_fb = (sport_id == 1 or sport_id == "Calcio")
+        if is_fb:
+            # Tier 1: I Principali Campionati di Diretta.it / Flashscore
+            if ('SERIE A' in lg) and ('ITALI' in lg or 'ITALY' in lg or lg == 'SERIE A') and 'WOMEN' not in lg and 'FEMMINILE' not in lg:
+                return (1, 1, feed_idx)
+            if ('SERIE B' in lg) and ('ITALI' in lg or 'ITALY' in lg or lg == 'SERIE B') and 'WOMEN' not in lg:
+                return (1, 2, feed_idx)
+            if ('COPPA ITALIA' in lg or 'SUPERCOPPA' in lg) and ('ITALI' in lg or 'ITALY' in lg):
+                return (1, 3, feed_idx)
+            if 'CHAMPIONS LEAGUE' in lg and ('EUROPE' in lg or 'EUROPA' in lg or 'UEFA' in lg) and 'WOMEN' not in lg:
+                return (1, 4, feed_idx)
+            if 'EUROPA LEAGUE' in lg and ('EUROPE' in lg or 'EUROPA' in lg or 'UEFA' in lg) and 'WOMEN' not in lg:
+                return (1, 5, feed_idx)
+            if 'CONFERENCE LEAGUE' in lg and 'WOMEN' not in lg:
+                return (1, 6, feed_idx)
+            if ('PREMIER LEAGUE' in lg) and ('ENGLAND' in lg or 'INGHILTERRA' in lg) and 'CUP' not in lg and '2' not in lg and 'U21' not in lg and 'WOMEN' not in lg:
+                return (1, 7, feed_idx)
+            if ('LALIGA' in lg) and ('SPAIN' in lg or 'SPAGNA' in lg) and '2' not in lg and 'HYPERMOTION' not in lg and 'WOMEN' not in lg:
+                return (1, 8, feed_idx)
+            if ('BUNDESLIGA' in lg) and ('GERMANY' in lg or 'GERMANIA' in lg) and '2' not in lg and 'WOMEN' not in lg:
+                return (1, 9, feed_idx)
+            if ('LIGUE 1' in lg) and ('FRANCE' in lg or 'FRANCIA' in lg) and 'WOMEN' not in lg:
+                return (1, 10, feed_idx)
+            if ('EREDIVISIE' in lg) and ('NETHERLANDS' in lg or 'OLANDA' in lg) and 'WOMEN' not in lg:
+                return (1, 11, feed_idx)
+            if ('LIGA PORTUGAL' in lg or 'PRIMEIRA LIGA' in lg) and '2' not in lg and 'WOMEN' not in lg:
+                return (1, 12, feed_idx)
+            if 'NATIONS LEAGUE' in lg and 'WOMEN' not in lg:
+                return (1, 13, feed_idx)
+            if any(x in lg for x in ['EUROPEI', 'EURO QUAL', 'EURO CUP']) and 'U21' not in lg and 'WOMEN' not in lg:
+                return (1, 14, feed_idx)
+            if any(x in lg for x in ['MONDIALI', 'WORLD CUP']) and 'U20' not in lg and 'U17' not in lg and 'WOMEN' not in lg:
+                return (1, 15, feed_idx)
+
+            # Tier 2: Campionati di Rilievo & Coppe Nazionali
+            if 'SERIE C' in lg: return (2, 1, feed_idx)
+            if 'CHAMPIONSHIP' in lg and ('ENGLAND' in lg or 'INGHILTERRA' in lg): return (2, 2, feed_idx)
+            if any(x in lg for x in ['FA CUP', 'EFL CUP', 'EFL TROPHY']) and ('ENGLAND' in lg or 'INGHILTERRA' in lg): return (2, 3, feed_idx)
+            if any(x in lg for x in ['COPA DEL REY', 'LALIGA2', 'HYPERMOTION']): return (2, 4, feed_idx)
+            if any(x in lg for x in ['2. BUNDESLIGA', 'DFB POKAL']): return (2, 5, feed_idx)
+            if any(x in lg for x in ['LIGUE 2', 'COUPE DE FRANCE']): return (2, 6, feed_idx)
+            if 'LIGA PORTUGAL 2' in lg: return (2, 7, feed_idx)
+            if 'SUPER LIG' in lg and ('TURKEY' in lg or 'TURCHIA' in lg): return (2, 8, feed_idx)
+            if 'JUPILER' in lg and ('BELGIUM' in lg or 'BELGIO' in lg): return (2, 9, feed_idx)
+            if 'SAUDI' in lg and ('LEAGUE' in lg or 'DIVISION' in lg): return (2, 10, feed_idx)
+            if ('SERIE A' in lg or 'COPA DO BRASIL' in lg) and ('BRAZIL' in lg or 'BRASILE' in lg): return (2, 11, feed_idx)
+            if 'LIGA PROFESIONAL' in lg and ('ARGENTINA' in lg): return (2, 12, feed_idx)
+            if any(x in lg for x in ['LIBERTADORES', 'SUDAMERICANA', 'AFC CHAMPIONS LEAGUE']): return (2, 13, feed_idx)
+            if 'MLS' in lg or 'MAJOR LEAGUE SOCCER' in lg: return (2, 14, feed_idx)
+
+            # Tier 3: Tutto il resto nell'ordine naturale del feed Flashscore
+            return (3, feed_idx, feed_idx)
+        else:
+            # Tennis
+            if any(x in lg for x in ['AUSTRALIAN OPEN', 'ROLAND GARROS', 'OPEN DI FRANCIA', 'FRENCH OPEN', 'WIMBLEDON', 'US OPEN']):
+                return (1, 1, feed_idx)
+            if 'ATP - SINGLES' in lg or 'ATP - SINGOLARE' in lg: return (1, 2, feed_idx)
+            if 'WTA - SINGLES' in lg or 'WTA - SINGOLARE' in lg: return (1, 3, feed_idx)
+            if 'ATP - DOUBLES' in lg or 'ATP - DOPPIO' in lg: return (1, 4, feed_idx)
+            if 'WTA - DOUBLES' in lg or 'WTA - DOPPIO' in lg: return (1, 5, feed_idx)
+            if 'CHALLENGER MEN - SINGLES' in lg or 'CHALLENGER UOMINI - SINGOLARE' in lg: return (2, 1, feed_idx)
+            if 'CHALLENGER WOMEN - SINGLES' in lg or 'CHALLENGER DONNE - SINGOLARE' in lg: return (2, 2, feed_idx)
+            if 'CHALLENGER' in lg and ('DOUBLES' in lg or 'DOPPIO' in lg): return (2, 3, feed_idx)
+            if 'ITF MEN' in lg or 'ITF UOMINI' in lg: return (3, 1, feed_idx)
+            if 'ITF WOMEN' in lg or 'ITF DONNE' in lg: return (3, 2, feed_idx)
+            return (4, feed_idx, feed_idx)
+
+    @staticmethod
     def fetch_all_today(sport_id=1, day_offset=0):
         odds_url = f"https://global.flashscore.ninja/5/x/feed/fo_{sport_id}_{day_offset}_2_it_1_0"
         odds_map = {}
@@ -300,6 +373,9 @@ class FlashscorePalinsestoService:
             r_sched = requests.get(sched_url, headers=FS_HEADERS, timeout=8)
             if r_sched.status_code == 200:
                 curr_league = "Generale"
+                curr_league_idx = 0
+                curr_sort_key = (3, 9999, 9999)
+                match_counter = 0
                 for row in r_sched.text.split("~"):
                     f = {}
                     for part in row.split(SEP1):
@@ -307,8 +383,11 @@ class FlashscorePalinsestoService:
                         if len(kv) == 2: f[kv[0]] = kv[1]
                     if "ZA" in f:
                         curr_league = f["ZA"]
+                        curr_league_idx += 1
+                        curr_sort_key = FlashscorePalinsestoService.get_tournament_sort_key(sport_id, curr_league, curr_league_idx)
                     elif "AA" in f:
                         mid = f["AA"]
+                        match_counter += 1
                         home = f.get("AE", "Casa").strip()
                         away = f.get("AF", "Ospite").strip()
                         ts = f.get("AD", "")
@@ -322,10 +401,14 @@ class FlashscorePalinsestoService:
                         score_str = f"{f.get('AG', '-')} : {f.get('AH', '-')}"
                         q = odds_map.get(mid)
                         q_str = " / ".join(f"{x:.2f}" for x in q) if q else "Quote N.D."
+                        is_top = curr_sort_key[0] == 1
                         matches.append({
                             "id": mid,
                             "sport": "Tennis" if sport_id == 2 else "Calcio",
                             "league": curr_league,
+                            "league_sort_key": curr_sort_key,
+                            "feed_order": match_counter,
+                            "is_top": is_top,
                             "home": home,
                             "away": away,
                             "time": time_str,
@@ -335,6 +418,9 @@ class FlashscorePalinsestoService:
                             "odds": q,
                             "odds_str": q_str
                         })
+
+                # Ordina: campionati principali prima, mantenendo l'ordine dei match nel torneo
+                matches.sort(key=lambda m: (m.get("league_sort_key", (99, 9999, 9999)), m.get("feed_order", 0)))
         except Exception: pass
         return matches
 
@@ -349,6 +435,38 @@ fb_db, tn_db = carica_db(DB_FILE)
 print(f"Database caricato: {len(fb_db):,} match Calcio, {len(tn_db):,} match Tennis.")
 
 favorites = {}
+cached_palinsesto = []
+last_palinsesto_time = 0
+
+def get_palinsesto(force=False):
+    global cached_palinsesto, last_palinsesto_time
+    now = time.time()
+    if not force and cached_palinsesto and (now - last_palinsesto_time < 90):
+        return cached_palinsesto
+    try:
+        fb = FlashscorePalinsestoService.fetch_all_today(sport_id=1, day_offset=0)
+        tn = FlashscorePalinsestoService.fetch_all_today(sport_id=2, day_offset=0)
+
+        def tier(m):
+            sk = m.get("league_sort_key", (3, 9999, 9999))
+            return sk[0] if isinstance(sk, (tuple, list)) else 3
+
+        # Gerarchia: Tier 1 Calcio (Serie A, Premier, LaLiga...) + Tier 1 Tennis (Grand Slam, ATP, WTA) in cima
+        # poi Tier 2 Calcio (Serie C, Championship, Coppe...) + Tier 2 Tennis (Challenger)
+        # poi il resto (Tier 3 / ITF / campionati minori)
+        fb_t1 = [m for m in fb if tier(m) == 1]
+        tn_t1 = [m for m in tn if tier(m) == 1]
+        fb_t2 = [m for m in fb if tier(m) == 2]
+        tn_t2 = [m for m in tn if tier(m) == 2]
+        fb_rest = [m for m in fb if tier(m) >= 3]
+        tn_rest = [m for m in tn if tier(m) >= 3]
+
+        all_m = fb_t1 + tn_t1 + fb_t2 + tn_t2 + fb_rest + tn_rest
+        cached_palinsesto = all_m
+        last_palinsesto_time = now
+    except Exception:
+        pass
+    return cached_palinsesto
 
 def load_saved_favorites():
     global favorites
@@ -358,6 +476,17 @@ def load_saved_favorites():
                 favorites = json.load(f)
         except Exception:
             favorites = {}
+
+    # Se vuoto, pre-popola con le prime 4 partite di oggi con quote
+    if not favorites:
+        pal = get_palinsesto()
+        with_odds = [m for m in pal if m.get("odds")]
+        for m in with_odds[:4]:
+            item = dict(m)
+            elabora_algoritmo(item)
+            favorites[item["id"]] = item
+        if favorites:
+            save_favorites()
 
 def save_favorites():
     try:
@@ -369,7 +498,7 @@ def elabora_algoritmo(m):
     q = m.get("odds")
     if not q:
         m["pick_str"] = "Quote N.D."
-        m["pick_title"] = "In attesa delle quote dei bookmaker"
+        m["pick_title"] = "In attesa delle quote ufficiali"
         m["summary_lines"] = ["• Quote al momento non disponibili sul feed"]
         m["full_report"] = ["Quote non disponibili."]
         return
@@ -392,6 +521,7 @@ def elabora_algoritmo(m):
             m["summary_lines"] = summ
             m["full_report"] = full
 
+# Precarica
 load_saved_favorites()
 for m in favorites.values():
     elabora_algoritmo(m)
@@ -410,6 +540,14 @@ def api_data():
         "count": len(fav_list),
         "favorites": fav_list,
         "timestamp": datetime.datetime.now().strftime("%H:%M:%S")
+    })
+
+@app.route("/api/palinsesto")
+def api_palinsesto():
+    pal = get_palinsesto()
+    return jsonify({
+        "count": len(pal),
+        "matches": pal
     })
 
 @app.route("/api/add", methods=["POST"])
@@ -434,16 +572,24 @@ def api_add():
     if not mid:
         return jsonify({"status": "error", "message": "ID partita non trovato"}), 400
 
+    # Cerca prima nel palinsesto cached
+    pal = get_palinsesto()
     match_item = None
-    for sp in [1, 2]:
-        for d in [0, 1, -1, 2, 3, 4, 5, 6, 7]:
-            res = FlashscorePalinsestoService.fetch_all_today(sport_id=sp, day_offset=d)
-            for rm in res:
-                if rm["id"] == mid:
-                    match_item = dict(rm)
-                    break
+    for item in pal:
+        if item["id"] == mid:
+            match_item = dict(item)
+            break
+
+    if not match_item:
+        for sp in [1, 2]:
+            for d in [0, 1, -1, 2, 3, 4, 5, 6, 7]:
+                res = FlashscorePalinsestoService.fetch_all_today(sport_id=sp, day_offset=d)
+                for rm in res:
+                    if rm["id"] == mid:
+                        match_item = dict(rm)
+                        break
+                if match_item: break
             if match_item: break
-        if match_item: break
 
     if not match_item:
         for base_url in [f"https://www.diretta.it/partita/{mid}/", f"https://www.flashscore.it/partita/{mid}/"]:
@@ -545,13 +691,13 @@ def render_mobile_html():
                 {details_block}
             </div>
             <div style="text-align: right; margin-top: 6px;">
-                <button onclick="rimuoviPartita('{mid}')" style="background:none; border:none; color:#ef4444; font-size:11px; font-weight:700; cursor:pointer;">✕ Rimuovi</button>
+                <button onclick="rimuoviPartita('{mid}')" style="background:none; border:none; color:#ef4444; font-size:11px; font-weight:700; cursor:pointer;">✕ Rimuovi dai Preferiti</button>
             </div>
         </div>
         '''
         fav_cards_html.append(card_html)
 
-    cards_content = "\n".join(fav_cards_html) if fav_cards_html else '<div style="text-align:center; padding: 40px 20px; color: var(--dim);">Nessuna partita preferita attualmente salvata.<br><br>Incolla il link o ID di una partita qui sotto per analizzarla!</div>'
+    cards_content = "\n".join(fav_cards_html) if fav_cards_html else '<div style="text-align:center; padding: 40px 20px; color: var(--dim);">Nessuna partita preferita attualmente salvata.<br><br>👉 Vai nella scheda <b>⚽ Palinsesto Oggi</b> per scegliere le partite con 1 tap!</div>'
     n_fav = len(favorites)
 
     return f'''<!DOCTYPE html>
@@ -579,7 +725,7 @@ def render_mobile_html():
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
             background: var(--bg);
             color: var(--txt);
-            padding: 12px;
+            padding: 10px;
             padding-bottom: 80px;
             line-height: 1.4;
         }}
@@ -591,7 +737,7 @@ def render_mobile_html():
             background: var(--card);
             border-radius: 14px;
             border: 1px solid var(--border);
-            margin-bottom: 12px;
+            margin-bottom: 10px;
         }}
         .logo {{ font-size: 15px; font-weight: 800; color: var(--acc); }}
         .live-tag {{
@@ -606,6 +752,36 @@ def render_mobile_html():
             gap: 4px;
         }}
         .live-dot {{ width: 6px; height: 6px; background: var(--green); border-radius: 50%; display: inline-block; }}
+
+        /* Tabs Navigazione */
+        .tabs-nav {{
+            display: flex;
+            gap: 6px;
+            margin-bottom: 12px;
+            background: var(--card);
+            padding: 4px;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+        }}
+        .tab-btn {{
+            flex: 1;
+            padding: 9px 6px;
+            border: none;
+            border-radius: 8px;
+            font-size: 12px;
+            font-weight: 700;
+            cursor: pointer;
+            background: transparent;
+            color: var(--dim);
+            transition: all 0.2s;
+            text-align: center;
+        }}
+        .tab-btn.active {{
+            background: var(--acc);
+            color: #0b0f19;
+            box-shadow: 0 2px 8px rgba(56, 189, 248, 0.3);
+        }}
+
         .actions-bar {{ display: flex; gap: 8px; margin-bottom: 12px; }}
         .btn {{
             flex: 1;
@@ -626,12 +802,13 @@ def render_mobile_html():
         .btn-sky {{ background: var(--acc); color: #0b0f19; }}
         .btn-dim {{ background: var(--card-sub); color: var(--txt); border: 1px solid var(--border); }}
         .btn:active {{ opacity: 0.8; transform: scale(0.98); }}
+
         .add-box {{
             background: var(--card);
             border: 1px solid var(--border);
             border-radius: 12px;
             padding: 10px;
-            margin-bottom: 14px;
+            margin-bottom: 12px;
         }}
         .add-form {{ display: flex; gap: 6px; }}
         .input-url {{
@@ -644,16 +821,8 @@ def render_mobile_html():
             font-size: 12px;
             outline: none;
         }}
-        .fav-header {{
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 10px;
-            padding: 0 4px;
-        }}
-        .fav-title {{ font-size: 14px; font-weight: 700; color: var(--acc); }}
-        .fav-badge {{ font-size: 11px; background: var(--card-sub); color: var(--dim); padding: 2px 8px; border-radius: 12px; }}
-        .cards-list {{ display: flex; flex-direction: column; gap: 12px; }}
+
+        .cards-list {{ display: flex; flex-direction: column; gap: 10px; }}
         .card {{
             background: var(--card);
             border: 1px solid var(--border);
@@ -676,7 +845,7 @@ def render_mobile_html():
             font-weight: 600;
         }}
         .match-time {{ font-weight: 700; color: var(--amber); }}
-        .teams {{ font-size: 15px; font-weight: 700; color: var(--txt); margin-bottom: 8px; }}
+        .teams {{ font-size: 14px; font-weight: 700; color: var(--txt); margin-bottom: 8px; }}
         .score {{ color: var(--green); margin-left: 6px; }}
         .odds-row {{ display: flex; gap: 6px; margin-bottom: 10px; }}
         .odd-pill {{
@@ -718,6 +887,94 @@ def render_mobile_html():
             white-space: pre-line;
             font-family: monospace;
         }}
+
+        /* Palinsesto Items */
+        .pal-filter-pills {{
+            display: flex;
+            gap: 6px;
+            margin-bottom: 10px;
+            overflow-x: auto;
+            padding-bottom: 2px;
+        }}
+        .pill-btn {{
+            background: var(--card-sub);
+            border: 1px solid var(--border);
+            color: var(--dim);
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 700;
+            cursor: pointer;
+            white-space: nowrap;
+            transition: all 0.2s ease;
+        }}
+        .pill-btn.active {{
+            background: rgba(14, 165, 233, 0.2);
+            border-color: var(--acc);
+            color: var(--acc);
+        }}
+        .pal-league-hdr {{
+            background: rgba(30, 41, 59, 0.85);
+            border-left: 3px solid var(--acc);
+            color: #f1f5f9;
+            padding: 7px 12px;
+            font-size: 11px;
+            font-weight: 800;
+            border-radius: 6px;
+            margin-top: 12px;
+            margin-bottom: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            letter-spacing: 0.3px;
+        }}
+        .pal-league-hdr.top {{
+            border-left-color: #f59e0b;
+            background: rgba(245, 158, 11, 0.14);
+            color: #fbbf24;
+        }}
+        .pal-search {{
+            width: 100%;
+            background: var(--card-sub);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            color: var(--txt);
+            padding: 9px 12px;
+            font-size: 13px;
+            outline: none;
+            margin-bottom: 10px;
+        }}
+        .pal-card {{
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 10px;
+            margin-bottom: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 10px;
+        }}
+        .pal-info {{ flex: 1; }}
+        .pal-teams {{ font-size: 13px; font-weight: 700; color: var(--txt); margin: 3px 0; }}
+        .pal-odds {{ font-size: 11px; color: var(--acc); font-weight: 600; }}
+        .pal-btn-add {{
+            background: rgba(34, 197, 94, 0.2);
+            border: 1px solid var(--green);
+            color: var(--green);
+            padding: 7px 12px;
+            border-radius: 8px;
+            font-size: 12px;
+            font-weight: 700;
+            cursor: pointer;
+            white-space: nowrap;
+        }}
+        .pal-btn-add.added {{
+            background: var(--green);
+            color: #0b0f19;
+            border-color: var(--green);
+        }}
+
         .toast {{
             position: fixed;
             bottom: 24px;
@@ -742,36 +999,182 @@ def render_mobile_html():
         <div class="live-tag"><span class="live-dot"></span> ATTIVO 24/7</div>
     </div>
 
-    <div class="actions-bar">
-        <button class="btn btn-green" onclick="copiaSchedina()">📋 Copia Schedina</button>
-        <a class="btn btn-sky" href="/download/schedina.txt" download>📥 Scarica .txt</a>
-        <button class="btn btn-dim" onclick="location.reload()">🔄 Ricarica</button>
+    <!-- TABS -->
+    <div class="tabs-nav">
+        <button id="btnTabFav" class="tab-btn active" onclick="switchTab('fav')">⭐ I Miei Preferiti ({n_fav})</button>
+        <button id="btnTabPal" class="tab-btn" onclick="switchTab('pal')">⚽ Palinsesto Oggi</button>
     </div>
 
-    <div class="add-box">
-        <form class="add-form" onsubmit="aggiungiPartita(event)">
-            <input type="text" id="addInput" class="input-url" placeholder="Incolla link Diretta/Flashscore o ID..." required>
-            <button type="submit" class="btn btn-sky" style="flex: 0 0 80px;">Aggiungi</button>
-        </form>
+    <!-- SEZIONE PREFERITI -->
+    <div id="sectionFav">
+        <div class="actions-bar">
+            <button class="btn btn-green" onclick="copiaSchedina()">📋 Copia Schedina</button>
+            <a class="btn btn-sky" href="/download/schedina.txt" download>📥 Scarica .txt</a>
+            <button class="btn btn-dim" onclick="location.reload()">🔄 Ricarica</button>
+        </div>
+
+        <div class="add-box">
+            <form class="add-form" onsubmit="aggiungiPartita(event)">
+                <input type="text" id="addInput" class="input-url" placeholder="Incolla link Diretta/Flashscore o ID..." required>
+                <button type="submit" class="btn btn-sky" style="flex: 0 0 80px;">Aggiungi</button>
+            </form>
+        </div>
+
+        <div class="cards-list" id="cardsContainer">
+            {cards_content}
+        </div>
     </div>
 
-    <div class="fav-header">
-        <div class="fav-title">⭐ Preferiti & Pronostici</div>
-        <div class="fav-badge" id="favCountBadge">{n_fav} partite</div>
-    </div>
-
-    <div class="cards-list" id="cardsContainer">
-        {cards_content}
+    <!-- SEZIONE PALINSESTO -->
+    <div id="sectionPal" style="display: none;">
+        <div class="pal-filter-pills">
+            <button class="pill-btn active" id="pillAll" onclick="setSportFilter('ALL')">⭐ Tutti</button>
+            <button class="pill-btn" id="pillFb" onclick="setSportFilter('Calcio')">⚽ Calcio</button>
+            <button class="pill-btn" id="pillTn" onclick="setSportFilter('Tennis')">🎾 Tennis</button>
+            <button class="pill-btn" id="pillTop" onclick="setSportFilter('TOP')">🔥 Principali</button>
+        </div>
+        <input type="text" id="palSearchInput" class="pal-search" placeholder="🔍 Cerca squadra o torneo di oggi..." oninput="applicaFiltriPalinsesto()">
+        <div style="font-size: 11px; color: var(--dim); margin-bottom: 8px;">Tocca <b>⭐ Aggiungi</b> per calcolare il pronostico all'istante:</div>
+        <div id="palinsestoContainer" class="cards-list">
+            <div style="text-align: center; padding: 20px; color: var(--dim);">Caricamento palinsesto in corso...</div>
+        </div>
     </div>
 
     <div id="toast" class="toast"></div>
 
     <script>
+        let palinsestoData = [];
+        let favIds = {list(favorites.keys())};
+        let currentSportFilter = 'ALL';
+
         function showToast(msg) {{
             const t = document.getElementById('toast');
             t.innerText = msg;
             t.style.display = 'block';
             setTimeout(() => {{ t.style.display = 'none'; }}, 2500);
+        }}
+
+        function switchTab(tab) {{
+            if (tab === 'fav') {{
+                document.getElementById('sectionFav').style.display = 'block';
+                document.getElementById('sectionPal').style.display = 'none';
+                document.getElementById('btnTabFav').classList.add('active');
+                document.getElementById('btnTabPal').classList.remove('active');
+            }} else {{
+                document.getElementById('sectionFav').style.display = 'none';
+                document.getElementById('sectionPal').style.display = 'block';
+                document.getElementById('btnTabFav').classList.remove('active');
+                document.getElementById('btnTabPal').classList.add('active');
+                if (palinsestoData.length === 0) caricaPalinsesto();
+            }}
+        }}
+
+        function setSportFilter(filter) {{
+            currentSportFilter = filter;
+            document.querySelectorAll('.pill-btn').forEach(b => b.classList.remove('active'));
+            if (filter === 'ALL') document.getElementById('pillAll').classList.add('active');
+            else if (filter === 'Calcio') document.getElementById('pillFb').classList.add('active');
+            else if (filter === 'Tennis') document.getElementById('pillTn').classList.add('active');
+            else if (filter === 'TOP') document.getElementById('pillTop').classList.add('active');
+            applicaFiltriPalinsesto();
+        }}
+
+        function applicaFiltriPalinsesto() {{
+            const query = document.getElementById('palSearchInput').value.toLowerCase().trim();
+            let filtered = palinsestoData;
+            if (currentSportFilter === 'Calcio') {{
+                filtered = filtered.filter(m => m.sport === 'Calcio');
+            }} else if (currentSportFilter === 'Tennis') {{
+                filtered = filtered.filter(m => m.sport === 'Tennis');
+            }} else if (currentSportFilter === 'TOP') {{
+                filtered = filtered.filter(m => m.is_top || (m.league_sort_key && m.league_sort_key[0] === 1));
+            }}
+            if (query) {{
+                filtered = filtered.filter(m => 
+                    (m.home && m.home.toLowerCase().includes(query)) ||
+                    (m.away && m.away.toLowerCase().includes(query)) ||
+                    (m.league && m.league.toLowerCase().includes(query))
+                );
+            }}
+            renderPalinsesto(filtered);
+        }}
+
+        async function caricaPalinsesto() {{
+            const container = document.getElementById('palinsestoContainer');
+            try {{
+                const res = await fetch('/api/palinsesto');
+                const data = await res.json();
+                palinsestoData = data.matches || [];
+                applicaFiltriPalinsesto();
+            }} catch (err) {{
+                container.innerHTML = '<div style="color:var(--red); text-align:center;">Errore caricamento partite.</div>';
+            }}
+        }}
+
+        function renderPalinsesto(matches) {{
+            const container = document.getElementById('palinsestoContainer');
+            if (matches.length === 0) {{
+                container.innerHTML = '<div style="text-align:center; padding:20px; color:var(--dim);">Nessuna partita trovata con questo filtro.</div>';
+                return;
+            }}
+            let html = '';
+            let currLeague = '';
+            matches.slice(0, 300).forEach(m => {{
+                if (m.league !== currLeague) {{
+                    currLeague = m.league;
+                    const isTop = m.is_top || (m.league_sort_key && m.league_sort_key[0] === 1);
+                    const spIcon = m.sport === 'Tennis' ? '🎾' : '🏆';
+                    html += `
+                    <div class="pal-league-hdr ${{isTop ? 'top' : ''}}">
+                        <span>${{spIcon}} ${{isTop ? '🔥 ' : ''}}${{m.league}}</span>
+                        ${{isTop ? '<span style="font-size:9px; background:#f59e0b; color:#000; padding:2px 6px; border-radius:4px; font-weight:800;">TOP</span>' : ''}}
+                    </div>`;
+                }}
+                const isFav = favIds.includes(m.id);
+                html += `
+                <div class="pal-card">
+                    <div class="pal-info">
+                        <div style="font-size:10px; color:var(--dim);">${{m.time}} • ${{m.status_code === '2' ? '<span style=\"color:var(--red); font-weight:800;\">LIVE ' + m.score + '</span>' : 'Programmata'}}</div>
+                        <div class="pal-teams">${{m.home}} vs ${{m.away}}</div>
+                        <div class="pal-odds">Quote: ${{m.odds_str || 'N.D.'}}</div>
+                    </div>
+                    <button class="pal-btn-add ${{isFav ? 'added' : ''}}" id="btn_pal_${{m.id}}" onclick="aggiungiDaPalinsesto('${{m.id}}')">
+                        ${{isFav ? '✓ In Schedina' : '⭐ Aggiungi'}}
+                    </button>
+                </div>
+                `;
+            }});
+            if (matches.length > 300) {{
+                html += `<div style="text-align:center; padding:15px; font-size:11px; color:var(--dim);">Mostrate prime 300 partite su ${{matches.length}}. Usa la barra di ricerca o i filtri per restringere.</div>`;
+            }}
+            container.innerHTML = html;
+        }}
+
+        async function aggiungiDaPalinsesto(mid) {{
+            const btn = document.getElementById('btn_pal_' + mid);
+            if (btn) btn.innerText = 'Elaborazione...';
+            try {{
+                const res = await fetch('/api/add', {{
+                    method: 'POST',
+                    headers: {{ 'Content-Type': 'application/json' }},
+                    body: JSON.stringify({{ url: mid }})
+                }});
+                const data = await res.json();
+                if (data.status === 'ok') {{
+                    favIds.push(mid);
+                    if (btn) {{
+                        btn.classList.add('added');
+                        btn.innerText = '✓ In Schedina';
+                    }}
+                    showToast('✓ Aggiunta e analizzata nei Preferiti!');
+                }} else {{
+                    if (btn) btn.innerText = '⭐ Aggiungi';
+                    showToast('Errore: ' + data.message);
+                }}
+            }} catch (err) {{
+                if (btn) btn.innerText = '⭐ Aggiungi';
+                showToast('Errore di connessione');
+            }}
         }}
 
         function toggleDetails(btn) {{
@@ -806,6 +1209,7 @@ def render_mobile_html():
                 }});
                 const data = await res.json();
                 if (data.status === 'ok') {{
+                    favIds = favIds.filter(id => id !== mid);
                     const el = document.getElementById('card_' + mid);
                     if (el) el.remove();
                     showToast('Partita rimossa');
