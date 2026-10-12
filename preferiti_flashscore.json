@@ -1,0 +1,280 @@
+{
+  "tW4rOkzg": {
+    "id": "tW4rOkzg",
+    "sport": "Calcio",
+    "league": "ENGLAND: Premier League",
+    "home": "Coventry",
+    "away": "Newcastle",
+    "time": "21:00",
+    "timestamp": 1791831600,
+    "status_code": "1",
+    "status": "Programmata",
+    "score": "- : -",
+    "odds": [
+      3.2,
+      3.6,
+      2.15
+    ],
+    "odds_str": "3.20 / 3.60 / 2.15",
+    "livello": "ok",
+    "pick_str": "🎯 12 (75.6%)",
+    "pick_title": "DOPPIA CHANCE 12  (75.6%)",
+    "summary_lines": [
+      "• 1285 precedenti, affidabilita' ALTA",
+      "• Favorito (segno 2): 45.1% storico, 44.1% fair quota",
+      "• Rottura 54.9%: pareggio 44%, ribaltone 56%"
+    ],
+    "full_report": [
+      "DOPPIA CHANCE 12  (75.6%)",
+      "1285 precedenti | tolleranza +/-2.0 pt | affidabilita' ALTA",
+      "",
+      "PERCHE' QUESTO PRONOSTICO:",
+      "Nessun segno singolo supera il 50%. La doppia chance 12 copre il 75.6%, escludendo il segno X (24.4%).",
+      "",
+      "FREQUENZE STORICHE:",
+      "1  [######|.............]   30.5% (392 match)",
+      "X  [#####|..............]   24.4% (313 match)",
+      "2  [#########|..........]   45.1% (580 match)",
+      "",
+      "ROTTURA FAVORITO (segno 2): 54.9% (pareggio 44% | vittoria 1 56%)",
+      "",
+      "Fair Odds: 3.38 / 3.80 / 2.27"
+    ]
+  },
+  "GxLyDAQb": {
+    "id": "GxLyDAQb",
+    "sport": "Calcio",
+    "league": "ITALY: Serie A",
+    "home": "Atalanta",
+    "away": "Venezia",
+    "time": "18:30",
+    "timestamp": 1791822600,
+    "status_code": "1",
+    "status": "Programmata",
+    "score": "- : -",
+    "odds": [
+      1.53,
+      4.2,
+      6.0
+    ],
+    "odds_str": "1.53 / 4.20 / 6.00",
+    "livello": "ok",
+    "pick_str": "🎯 1 (64.4%)",
+    "pick_title": "SEGNO 1  (64.4%)",
+    "summary_lines": [
+      "• 1124 precedenti, affidabilita' ALTA",
+      "• Favorito (segno 1): 64.4% storico, 61.8% fair quota",
+      "• Rottura 35.6%: pareggio 55%, ribaltone 45%"
+    ],
+    "full_report": [
+      "SEGNO 1  (64.4%)",
+      "1124 precedenti | tolleranza +/-2.0 pt | affidabilita' ALTA",
+      "",
+      "PERCHE' QUESTO PRONOSTICO:",
+      "Nei 1124 match storici il segno 1 e' uscito il 64.4% (supera il 50%).",
+      "",
+      "FREQUENZE STORICHE:",
+      "1  [############|.......]   64.4% (724 match)",
+      "X  [####|...............]   19.7% (221 match)",
+      "2  [###|................]   15.9% (179 match)",
+      "",
+      "ROTTURA FAVORITO (segno 1): 35.6% (pareggio 55% | vittoria 2 45%)",
+      "",
+      "Fair Odds: 1.62 / 4.45 / 6.35"
+    ]
+  },
+  "r9rkvmPc": {
+    "id": "r9rkvmPc",
+    "sport": "Calcio",
+    "league": "ITALY: Serie A",
+    "home": "Torino",
+    "away": "Udinese",
+    "time": "20:45",
+    "timestamp": 1791830700,
+    "status_code": "1",
+    "status": "Programmata",
+    "score": "- : -",
+    "odds": [
+      2.35,
+      3.1,
+      3.3
+    ],
+    "odds_str": "2.35 / 3.10 / 3.30",
+    "livello": "ok",
+    "pick_str": "🎯 1X (71.3%)",
+    "pick_title": "DOPPIA CHANCE 1X  (71.3%)",
+    "summary_lines": [
+      "• 1678 precedenti, affidabilita' ALTA",
+      "• Favorito (segno 1): 40.2% storico, 40.5% fair quota",
+      "• Rottura 59.8%: pareggio 52%, ribaltone 48%"
+    ],
+    "full_report": [
+      "DOPPIA CHANCE 1X  (71.3%)",
+      "1678 precedenti | tolleranza +/-2.0 pt | affidabilita' ALTA",
+      "",
+      "PERCHE' QUESTO PRONOSTICO:",
+      "Nessun segno singolo supera il 50%. La doppia chance 1X copre il 71.3%, escludendo il segno 2 (28.7%).",
+      "",
+      "FREQUENZE STORICHE:",
+      "1  [########|...........]   40.2% (674 match)",
+      "X  [######|.............]   31.2% (523 match)",
+      "2  [######|.............]   28.7% (481 match)",
+      "",
+      "ROTTURA FAVORITO (segno 1): 59.8% (pareggio 52% | vittoria 2 48%)",
+      "",
+      "Fair Odds: 2.47 / 3.26 / 3.47"
+    ]
+  },
+  "ADgsxdhm": {
+    "id": "ADgsxdhm",
+    "sport": "Calcio",
+    "league": "SPAIN: LaLiga",
+    "home": "Levante",
+    "away": "Sevilla",
+    "time": "21:00",
+    "timestamp": 1791831600,
+    "status_code": "1",
+    "status": "Programmata",
+    "score": "- : -",
+    "odds": [
+      2.63,
+      3.2,
+      2.8
+    ],
+    "odds_str": "2.63 / 3.20 / 2.80",
+    "livello": "ok",
+    "pick_str": "🎯 12 (68.8%)",
+    "pick_title": "DOPPIA CHANCE 12  (68.8%)",
+    "summary_lines": [
+      "• 2096 precedenti, affidabilita' ALTA",
+      "• Favorito (segno 1): 34.3% storico, 36.2% fair quota",
+      "• Rottura 65.7%: pareggio 48%, ribaltone 52%"
+    ],
+    "full_report": [
+      "DOPPIA CHANCE 12  (68.8%)",
+      "2096 precedenti | tolleranza +/-2.0 pt | affidabilita' ALTA",
+      "",
+      "PERCHE' QUESTO PRONOSTICO:",
+      "Nessun segno singolo supera il 50%. La doppia chance 12 copre il 68.8%, escludendo il segno X (31.2%).",
+      "",
+      "FREQUENZE STORICHE:",
+      "1  [#######|............]   34.3% (719 match)",
+      "X  [######|.............]   31.2% (655 match)",
+      "2  [#######|............]   34.4% (722 match)",
+      "",
+      "ROTTURA FAVORITO (segno 1): 65.7% (pareggio 48% | vittoria 2 52%)",
+      "",
+      "Fair Odds: 2.76 / 3.36 / 2.94"
+    ]
+  },
+  "j3B2ANuK": {
+    "id": "j3B2ANuK",
+    "sport": "Tennis",
+    "league": "ATP - SINGLES: Shanghai (China), hard",
+    "home": "Carreno-Busta P. (Esp)",
+    "away": "Auger-Aliassime F. (Can)",
+    "time": "06:00",
+    "timestamp": 1791777600,
+    "status_code": "1",
+    "status": "Programmata",
+    "score": "- : -",
+    "odds": [
+      3.75,
+      1.29
+    ],
+    "odds_str": "3.75 / 1.29",
+    "livello": "ok",
+    "pick_str": "🎯 SEGNO 2 (favorito solido)",
+    "pick_title": "SEGNO 2 (favorito solido)",
+    "summary_lines": [
+      "• 4274 precedenti, affidabilita' ALTA",
+      "• Favorito (G2): 75.1% storico, 74.4% pulita",
+      "• Ribaltone 24.9%"
+    ],
+    "full_report": [
+      "SEGNO 2 (favorito solido)",
+      "4274 precedenti | tolleranza +/-1.5 pt",
+      "",
+      "FREQUENZE STORICHE:",
+      "G2 fav: 75.1%",
+      "G1 sfv: 24.9%",
+      "",
+      "Fair Odds: 3.91 / 1.34"
+    ]
+  },
+  "YyjFOsyB": {
+    "id": "YyjFOsyB",
+    "sport": "Tennis",
+    "league": "ATP - SINGLES: Shanghai (China), hard",
+    "home": "Tien L. (Usa)",
+    "away": "Ruud C. (Nor)",
+    "time": "06:00",
+    "timestamp": 1791777600,
+    "status_code": "1",
+    "status": "Programmata",
+    "score": "- : -",
+    "odds": [
+      1.62,
+      2.3
+    ],
+    "odds_str": "1.62 / 2.30",
+    "livello": "warn",
+    "pick_str": "🎯 SEGNO 1 (moderato)",
+    "pick_title": "SEGNO 1 (moderato)",
+    "summary_lines": [
+      "• 6855 precedenti, affidabilita' ALTA",
+      "• Favorito (G1): 58.1% storico, 58.7% pulita",
+      "• Ribaltone 41.9%"
+    ],
+    "full_report": [
+      "SEGNO 1 (moderato)",
+      "6855 precedenti | tolleranza +/-1.5 pt",
+      "",
+      "FREQUENZE STORICHE:",
+      "G1 fav: 58.1%",
+      "G2 sfv: 41.9%",
+      "",
+      "Fair Odds: 1.70 / 2.42"
+    ]
+  },
+  "jHUDBeFN": {
+    "id": "jHUDBeFN",
+    "sport": "Calcio",
+    "league": "DENMARK: Superliga",
+    "home": "Aarhus",
+    "away": "Sonderjyske",
+    "time": "19:00",
+    "timestamp": 1791824400,
+    "status_code": "1",
+    "score": "- : -",
+    "odds": [
+      1.57,
+      4.2,
+      5.25
+    ],
+    "odds_str": "1.57 / 4.20 / 5.25",
+    "pick_str": "🎯 1 (63.6%)",
+    "pick_title": "SEGNO 1  (63.6%)",
+    "summary_lines": [
+      "• 1123 precedenti, affidabilita' ALTA",
+      "• Favorito (segno 1): 63.6% storico, 59.8% fair quota",
+      "• Rottura 36.4%: pareggio 55%, ribaltone 45%"
+    ],
+    "full_report": [
+      "SEGNO 1  (63.6%)",
+      "1123 precedenti | tolleranza +/-2.0 pt | affidabilita' ALTA",
+      "",
+      "PERCHE' QUESTO PRONOSTICO:",
+      "Nei 1123 match storici il segno 1 e' uscito il 63.6% (supera il 50%).",
+      "",
+      "FREQUENZE STORICHE:",
+      "1  [############|.......]   63.6% (714 match)",
+      "X  [####|...............]   20.1% (226 match)",
+      "2  [###.|...............]   16.3% (183 match)",
+      "",
+      "ROTTURA FAVORITO (segno 1): 36.4% (pareggio 55% | vittoria 2 45%)",
+      "",
+      "Fair Odds: 1.67 / 4.48 / 5.59"
+    ]
+  }
+}
