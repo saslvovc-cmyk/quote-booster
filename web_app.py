@@ -96,11 +96,11 @@ def carica_db(path):
              "AND odds_b365_h > 1 AND odds_b365_d > 1 AND odds_b365_a > 1 ORDER BY match_date")
         for d, h, a, res, o1, ox, o2 in cur.execute(q):
             try:
-                (p1, px, p2), _ = devig([float(o1), float(ox), float(o2)])
-            except (ValueError, TypeError, ZeroDivisionError):
+                o1, ox, o2 = float(o1), float(ox), float(o2)
+            except (ValueError, TypeError):
                 continue
             d = d or ""
-            fb.append((d, h, a, res, p1, px, p2))
+            fb.append((d, h, a, res, o1, ox, o2))
 
     if "tennis_matches" in tabelle:
         q = ("SELECT match_date, tournament, surface, winner, loser, odds_b365_w, odds_b365_l, best_of "
@@ -110,158 +110,229 @@ def carica_db(path):
                 ow, ol = float(ow), float(ol)
             except (ValueError, TypeError):
                 continue
-            if ow == ol:
-                continue
-            (pw, pl), _ = devig([ow, ol])
             d = d or ""
-            if ow < ol:
-                tn.append((d, t, s, w, l, pw, True, str(bo)))
-            else:
-                tn.append((d, t, s, l, w, pl, False, str(bo)))
+            tn.append((d, t, s, w, l, ow, ol, str(bo or '3')))
     conn.close()
     return fb, tn
 
-def analizza_calcio(rows, q1, qx, q2):
+def analizza_calcio(rows, q1, qx, q2, ruolo="Tutti"):
     if not rows or any(x is None or x <= 1.0 for x in (q1, qx, q2)):
         return None
-    (p1, px, p2), aggio = devig([q1, qx, q2])
-    fav = "1" if p1 >= p2 else "2"
-    cand = []
-    for r in rows:
-        d = max(abs(r[4] - p1), abs(r[5] - px), abs(r[6] - p2))
-        if d <= 0.06:
-            cand.append((d, r))
-    if not cand:
-        return None
-    cand.sort(key=lambda t: t[0])
-    tol = 0.02
-    if len(cand) >= MIN_N_CALCIO:
-        tol = max(tol, cand[MIN_N_CALCIO - 1][0])
-    else:
-        tol = 0.06
-    campione = sorted([r for d, r in cand if d <= tol], key=lambda r: r[0] or "")
-    n = len(campione)
-    cnt = {"1": sum(1 for r in campione if r[3] == "H"),
-           "X": sum(1 for r in campione if r[3] == "D"),
-           "2": sum(1 for r in campione if r[3] == "A")}
-    freq = {k: v / n * 100 for k, v in cnt.items()}
-    impl = {"1": p1 * 100, "X": px * 100, "2": p2 * 100}
-    dog = "2" if fav == "1" else "1"
-    z_fav = zscore(freq[fav] / 100, impl[fav] / 100, n)
-    rottura = 100 - freq[fav]
-    rottura_att = 100 - impl[fav]
-    quota_x = (cnt["X"] / (cnt["X"] + cnt[dog]) * 100) if (cnt["X"] + cnt[dog]) else 0
+    tol1 = max(0.06, q1 * 0.05)
+    tolx = max(0.15, qx * 0.06)
+    tol2 = max(0.20, q2 * 0.07)
 
-    ordine = sorted(freq, key=freq.get, reverse=True)
-    if freq[ordine[0]] >= 50:
-        pick = ordine[0]
-        pick_pct = freq[pick]
+    q1_min, q1_max = q1 - tol1, q1 + tol1
+    qx_min, qx_max = qx - tolx, qx + tolx
+    q2_min, q2_max = q2 - tol2, q2 + tol2
+
+    campione = []
+    for r in rows:
+        # r = (match_date, home_team, away_team, ftr, odds_b365_h, odds_b365_d, odds_b365_a)
+        if ruolo == "Casa Favorita" and r[4] > r[6]:
+            continue
+        if ruolo == "Ospite Favorita" and r[6] >= r[4]:
+            continue
+        if (q1_min <= r[4] <= q1_max and
+            qx_min <= r[5] <= qx_max and
+            q2_min <= r[6] <= q2_max):
+            campione.append(r)
+
+    if not campione:
+        return None
+
+    tot = len(campione)
+    cnt_1 = sum(1 for r in campione if r[3] == 'H')
+    cnt_x = sum(1 for r in campione if r[3] == 'D')
+    cnt_2 = sum(1 for r in campione if r[3] == 'A')
+
+    pct_1 = cnt_1 / tot * 100
+    pct_x = cnt_x / tot * 100
+    pct_2 = cnt_2 / tot * 100
+
+    sum_inv = (1.0 / q1) + (1.0 / qx) + (1.0 / q2)
+    prob_imp_1 = (1.0 / q1) / sum_inv * 100
+    prob_imp_x = (1.0 / qx) / sum_inv * 100
+    prob_imp_2 = (1.0 / q2) / sum_inv * 100
+
+    diff_1 = pct_1 - prob_imp_1
+    diff_x = pct_x - prob_imp_x
+    diff_2 = pct_2 - prob_imp_2
+
+    fav_segno = '1' if q1 < q2 else '2'
+    fav_pct = pct_1 if fav_segno == '1' else pct_2
+    dog_double = 'X2' if fav_segno == '1' else '1X'
+    dog_double_pct = (pct_x + pct_2) if fav_segno == '1' else (pct_1 + pct_x)
+
+    if fav_pct >= 62.0:
+        verdetto = f"SEGNO {fav_segno} (Vittoria Favorita confermata dai dati)"
+        motivo = f"Il favorito storico converte nel {fav_pct:.1f}% dei casi su {tot} partite."
+        pick = fav_segno
+        pick_pct = fav_pct
         tipo = "singolo"
-    else:
-        escluso = ordine[2]
-        pick = {"1": "X2", "X": "12", "2": "1X"}[escluso]
-        pick_pct = 100 - freq[escluso]
-        tipo = "doppia"
-
-    def hit(r):
-        s = {"H": "1", "D": "X", "A": "2"}[r[3]]
-        return 1 if s in pick else 0
-    trend = _meta_trend([hit(r) for r in campione])
-
-    return dict(n=n, tol=tol, P=(p1, px, p2), aggio=aggio, fair=(1 / p1, 1 / px, 1 / p2),
-                fav=fav, dog=dog, cnt=cnt, freq=freq, impl=impl, z_fav=z_fav,
-                rottura=rottura, rottura_att=rottura_att, x_nelle_rotture=quota_x,
-                pick=pick, pick_pct=pick_pct, tipo=tipo, trend=trend, ultimi=campione[-5:])
-
-def analizza_tennis(rows, q1, q2):
-    if not rows or any(x is None or x <= 1.0 for x in (q1, q2)):
-        return None
-    (pa, pb), aggio = devig([q1, q2])
-    p_fav = max(pa, pb)
-    fav = "1" if q1 <= q2 else "2"
-    und = "2" if fav == "1" else "1"
-    cand = []
-    for r in rows:
-        d = abs(r[5] - p_fav)
-        if d <= 0.05:
-            cand.append((d, r))
-    if not cand:
-        return None
-    cand.sort(key=lambda t: t[0])
-    tol = 0.015
-    if len(cand) >= MIN_N_TENNIS:
-        tol = max(tol, cand[MIN_N_TENNIS - 1][0])
-    else:
-        tol = 0.05
-    campione = sorted([r for d, r in cand if d <= tol], key=lambda r: r[0] or "")
-    n = len(campione)
-    fav_c = sum(1 for r in campione if r[6])
-    pct_fav = fav_c / n * 100
-    pct_und = 100 - pct_fav
-    impl_fav = p_fav * 100
-    z_fav = zscore(pct_fav / 100, p_fav, n)
-
-    if pct_und > 50:
-        verdetto = f"SEGNO {und} (lo sfavorito prevale nel contesto)"
-        livello = "bad"
-    elif pct_fav >= 62 and z_fav > -1.5:
-        verdetto = f"SEGNO {fav} (favorito solido)"
         livello = "ok"
-    elif pct_fav >= 55:
-        verdetto = f"SEGNO {fav} (moderato)"
+    elif dog_double_pct >= 48.0 and diff_x > 2.0:
+        verdetto = f"DOPPIA CHANCE {dog_double} (Trappola Favorito - Frequenza Pareggi/Rottura anomala)"
+        motivo = f"La favorita nominale fallisce nel {dog_double_pct:.1f}% dei casi (Pareggio reale: {pct_x:.1f}%)."
+        pick = dog_double
+        pick_pct = dog_double_pct
+        tipo = "doppia"
+        livello = "warn"
+    elif pct_x >= 30.0:
+        verdetto = "SEGNO X (Alta densità di pareggio nel pattern)"
+        motivo = f"Il pareggio si manifesta al {pct_x:.1f}%, molto sopra la media standard."
+        pick = "X"
+        pick_pct = pct_x
+        tipo = "singolo"
         livello = "warn"
     else:
-        verdetto = f"MATCH APERTO: {und} competitivo"
+        verdetto = f"DOPPIA CHANCE {'1X' if q1 <= q2 else 'X2'} (Copertura prudenziale)"
+        motivo = "Equilibrio statistico: convergenza non netta sul solo esito pieno."
+        pick = '1X' if q1 <= q2 else 'X2'
+        pick_pct = dog_double_pct
+        tipo = "doppia"
+        livello = "dim"
+
+    return dict(n=tot, tol1=tol1, tolx=tolx, tol2=tol2,
+                cnt={"1": cnt_1, "X": cnt_x, "2": cnt_2},
+                freq={"1": pct_1, "X": pct_x, "2": pct_2},
+                impl={"1": prob_imp_1, "X": prob_imp_x, "2": prob_imp_2},
+                diff={"1": diff_1, "X": diff_x, "2": diff_2},
+                fav_segno=fav_segno, fav_pct=fav_pct, dog_double=dog_double, dog_double_pct=dog_double_pct,
+                verdetto=verdetto, motivo=motivo,
+                pick=pick, pick_pct=pick_pct, tipo=tipo, livello=livello,
+                ultimi=campione[-5:])
+
+def analizza_tennis(rows, q1, q2, superficie="Tutte", formato="Tutti i formati"):
+    if not rows or any(x is None or x <= 1.0 for x in (q1, q2)):
+        return None
+    q_fav = min(q1, q2)
+    q_und = max(q1, q2)
+    fav_idx = "1" if q1 <= q2 else "2"
+    und_idx = "2" if q1 <= q2 else "1"
+
+    tolf = max(0.05, q_fav * 0.05)
+    tolu = max(0.12, q_und * 0.06)
+    f_min, f_max = q_fav - tolf, q_fav + tolf
+    u_min, u_max = q_und - tolu, q_und + tolu
+
+    campione = []
+    for r in rows:
+        # r = (match_date, tournament, surface, winner, loser, odds_b365_w, odds_b365_l, best_of)
+        if superficie != "Tutte" and str(r[2]).lower() != superficie.lower():
+            continue
+        if formato == "3 Set (ATP/WTA)" and str(r[7]) != "3":
+            continue
+        if formato == "5 Set (Slam)" and str(r[7]) != "5":
+            continue
+        ow, ol = r[5], r[6]
+        if ((f_min <= ow <= f_max and u_min <= ol <= u_max) or
+            (f_min <= ol <= f_max and u_min <= ow <= u_max)):
+            campione.append(r)
+
+    if not campione:
+        return None
+
+    tot = len(campione)
+    cnt_fav = sum(1 for r in campione if r[5] < r[6])
+    cnt_und = tot - cnt_fav
+
+    pct_fav = cnt_fav / tot * 100
+    pct_und = cnt_und / tot * 100
+
+    sum_inv = (1.0 / q_fav) + (1.0 / q_und)
+    prob_imp_fav = (1.0 / q_fav) / sum_inv * 100
+    diff_fav = pct_fav - prob_imp_fav
+
+    is_fav = [1 if r[5] < r[6] else 0 for r in campione]
+    fail_streaks = [len(list(g)) for k, g in itertools.groupby(is_fav) if k == 0]
+    max_fail = max(fail_streaks) if fail_streaks else 0
+    avg_fail = (sum(fail_streaks) / len(fail_streaks)) if fail_streaks else 0
+
+    if pct_fav >= 66.0:
+        verdetto = f"VITTORIA SEGNO {fav_idx} (Favorito Solido nel contesto)"
+        alert = "Tenuta alta: la quota bassa trova conferma nel campione analizzato."
+        pick = fav_idx
+        pick_pct = pct_fav
+        livello = "ok"
+    elif pct_und >= 45.0 or diff_fav <= -5.0:
+        verdetto = f"SORPRESA / OVER SET: SEGNO {und_idx} COMPETITIVO (Allarme Trappola)"
+        alert = f"ATTENZIONE: Lo sfavorito vince nel {pct_und:.1f}% dei casi. Quota {q_fav:.2f} ingannevole su questa superficie!"
+        pick = und_idx
+        pick_pct = pct_und
         livello = "bad"
+    else:
+        verdetto = "MATCH A ELEVATA VOLATILITÀ (Esito incerto / Monetina)"
+        alert = f"Il favorito vince solo al {pct_fav:.1f}%. Il margine statistico non giustifica una quota bassa."
+        pick = fav_idx
+        pick_pct = pct_fav
+        livello = "warn"
 
-    return dict(n=n, tol=tol, P=(pa, pb), aggio=aggio, fair=(1 / pa, 1 / pb), fav=fav, und=und,
-                pct_fav=pct_fav, pct_und=pct_und, impl_fav=impl_fav, z_fav=z_fav,
-                verdetto=verdetto, livello=livello, ultimi=campione[-5:])
-
-def barra(pct, impl, width=20):
-    n = int(round(max(0, min(100, pct)) / 100 * width))
-    celle = ["#"] * n + ["."] * (width - n)
-    k = max(0, min(width - 1, int(round(max(0, min(100, impl)) / 100 * width))))
-    celle[k] = "|"
-    return "".join(celle)
+    return dict(n=tot, tolf=tolf, tolu=tolu,
+                cnt_fav=cnt_fav, cnt_und=cnt_und,
+                pct_fav=pct_fav, pct_und=pct_und,
+                prob_imp_fav=prob_imp_fav, diff_fav=diff_fav,
+                fav_idx=fav_idx, und_idx=und_idx,
+                max_fail=max_fail, avg_fail=avg_fail,
+                verdetto=verdetto, alert=alert,
+                pick=pick, pick_pct=pick_pct, livello=livello,
+                ultimi=campione[-5:])
 
 def report_calcio(r, q):
-    fav, dog = r["fav"], r["dog"]
-    pct = r["pick_pct"]
-    livello = "ok" if pct >= 60 else ("warn" if pct >= 50 else "bad")
-    nome = f"SEGNO {r['pick']}" if r["tipo"] == "singolo" else f"DOPPIA CHANCE {r['pick']}"
-    titolo = f"{nome}  ({pct:.1f}%)"
-    xr = r["x_nelle_rotture"]
+    livello = r["livello"]
+    titolo = r["verdetto"]
     summary = [
-        f"• {r['n']} precedenti, affidabilita' {affidabilita(r['n'])}",
-        f"• Favorito (segno {fav}): {r['freq'][fav]:.1f}% storico, {r['impl'][fav]:.1f}% fair quota",
-        f"• Rottura {r['rottura']:.1f}%: pareggio {xr:.0f}%, ribaltone {100 - xr:.0f}%",
+        f"• {r['n']} precedenti storici con pattern quote simile",
+        f"• {r['motivo']}",
+        f"• 1: {r['freq']['1']:.1f}% | X: {r['freq']['X']:.1f}% | 2: {r['freq']['2']:.1f}%",
+        f"• Rottura Favorito (X o Ribaltone): {r['dog_double_pct']:.1f}%",
     ]
-    full = [titolo, f"{r['n']} precedenti | tolleranza +/-{r['tol'] * 100:.1f} pt | affidabilita' {affidabilita(r['n'])}", ""]
-    full.append("PERCHE' QUESTO PRONOSTICO:")
-    if r["tipo"] == "singolo":
-        full.append(f"Nei {r['n']} match storici il segno {r['pick']} e' uscito il {pct:.1f}% (supera il 50%).")
-    else:
-        escluso = [s for s in ("1", "X", "2") if s not in r["pick"]][0]
-        full.append(f"Nessun segno singolo supera il 50%. La doppia chance {r['pick']} copre il {pct:.1f}%, escludendo il segno {escluso} ({r['freq'][escluso]:.1f}%).")
-    full += ["", "FREQUENZE STORICHE:"]
-    for s in ("1", "X", "2"):
-        full.append(f"{s}  [{barra(r['freq'][s], r['impl'][s])}]  {r['freq'][s]:5.1f}% ({r['cnt'][s]} match)")
-    full += ["", f"ROTTURA FAVORITO (segno {fav}): {r['rottura']:.1f}% (pareggio {xr:.0f}% | vittoria {dog} {100 - xr:.0f}%)"]
-    full += ["", f"Fair Odds: {r['fair'][0]:.2f} / {r['fair'][1]:.2f} / {r['fair'][2]:.2f}"]
+    full = [
+        f"PRONOSTICO STATISTICO: {r['verdetto']}",
+        f"Motivazione: {r['motivo']}",
+        f"Campione: {r['n']} match storici analizzati",
+        "",
+        "DISTRIBUZIONE EFFETTIVA RISCONTRATA:",
+        f"• Segno 1: {r['cnt']['1']} match ({r['freq']['1']:.1f}%) | Implicita Quota: {r['impl']['1']:.1f}% [{r['diff']['1']:+.1f}%]",
+        f"• Segno X: {r['cnt']['X']} match ({r['freq']['X']:.1f}%) | Implicita Quota: {r['impl']['X']:.1f}% [{r['diff']['X']:+.1f}%]",
+        f"• Segno 2: {r['cnt']['2']} match ({r['freq']['2']:.1f}%) | Implicita Quota: {r['impl']['2']:.1f}% [{r['diff']['2']:+.1f}%]",
+        "",
+        f"INDICATORE DI ROTTURA DEL FAVORITO: {r['dog_double_pct']:.1f}% delle volte",
+        "",
+        "ULTIMI 5 MATCH STORICI REGISTRATI:"
+    ]
+    for m in r["ultimi"]:
+        full.append(f"[{m[0]}] {m[1]} vs {m[2]} -> Esito: {m[3]}")
     return livello, titolo, summary, full
 
 def report_tennis(r, q):
     livello = r["livello"]
     titolo = r["verdetto"]
     summary = [
-        f"• {r['n']} precedenti, affidabilita' {affidabilita(r['n'])}",
-        f"• Favorito (G{r['fav']}): {r['pct_fav']:.1f}% storico, {r['impl_fav']:.1f}% pulita",
-        f"• Ribaltone {r['pct_und']:.1f}%",
+        f"• {r['n']} precedenti reali analizzati",
+        f"• {r['alert']}",
+        f"• Vittoria Favorito G{r['fav_idx']}: {r['pct_fav']:.1f}% (Attesa: {r['prob_imp_fav']:.1f}%)",
+        f"• Sorpresa Sfavorito G{r['und_idx']}: {r['pct_und']:.1f}%",
     ]
-    full = [titolo, f"{r['n']} precedenti | tolleranza +/-{r['tol'] * 100:.1f} pt", ""]
-    full += ["FREQUENZE STORICHE:", f"G{r['fav']} fav: {r['pct_fav']:.1f}%", f"G{r['und']} sfv: {r['pct_und']:.1f}%"]
-    full += ["", f"Fair Odds: {r['fair'][0]:.2f} / {r['fair'][1]:.2f}"]
+    full = [
+        f"PRONOSTICO STATISTICO: {r['verdetto']}",
+        f"Nota: {r['alert']}",
+        f"Campione: {r['n']} match storici analizzati",
+        "",
+        "DATI REALI vs QUOTE:",
+        f"• Vittoria Favorito (G{r['fav_idx']}): {r['cnt_fav']} volte ({r['pct_fav']:.1f}%) [Attesa teorica: {r['prob_imp_fav']:.1f}%]",
+        f"• Ribaltone Underdog (G{r['und_idx']}): {r['cnt_und']} volte ({r['pct_und']:.1f}%)",
+        "",
+        "CICLO DI ROTTURA (QUANDO IL FAVORITO SALTA):",
+        f"• Tasso effettivo di ribaltone: {r['pct_und']:.1f}%",
+        f"• Serie max di ribaltoni consecutivi: {r['max_fail']} match",
+        f"• Media serie di ribaltoni: {r['avg_fail']:.2f} match",
+        "",
+        "ULTIMI 5 MATCH CAMPIONATI:"
+    ]
+    for m in r["ultimi"]:
+        tag = "FAVORITO" if m[5] < m[6] else "RIBALTONE"
+        full.append(f"[{m[0]}] {m[3]} b. {m[4]} ({tag})")
     return livello, titolo, summary, full
 
 # =====================================================================
@@ -468,31 +539,88 @@ def get_palinsesto(force=False):
         pass
     return cached_palinsesto
 
-def load_saved_favorites():
-    global favorites
-    if os.path.exists(FAV_FILE):
+SCHEDINE_FILE = "schedine_salvate.json"
+active_schedina_name = "Schedina Principale"
+schedine_store = {}
+
+def load_schedine_data():
+    global schedine_store, favorites, active_schedina_name
+    schedine_store = {}
+    if os.path.exists(SCHEDINE_FILE):
         try:
-            with open(FAV_FILE, "r", encoding="utf-8") as f:
-                favorites = json.load(f)
+            with open(SCHEDINE_FILE, "r", encoding="utf-8") as f:
+                data = json.load(f)
+                schedine_store = data.get("schedine", {})
+                active_schedina_name = data.get("active", "Schedina Principale")
         except Exception:
-            favorites = {}
+            pass
 
-    # Se vuoto, pre-popola con le prime 4 partite di oggi con quote
-    if not favorites:
-        pal = get_palinsesto()
-        with_odds = [m for m in pal if m.get("odds")]
-        for m in with_odds[:4]:
-            item = dict(m)
-            elabora_algoritmo(item)
-            favorites[item["id"]] = item
-        if favorites:
-            save_favorites()
+    if not schedine_store:
+        # Carica da FAV_FILE se esiste
+        fav_legacy = {}
+        if os.path.exists(FAV_FILE):
+            try:
+                with open(FAV_FILE, "r", encoding="utf-8") as f:
+                    fav_legacy = json.load(f)
+            except Exception:
+                fav_legacy = {}
+        schedine_store = {
+            "Schedina Principale": fav_legacy
+        }
+        active_schedina_name = "Schedina Principale"
 
-def save_favorites():
+    if active_schedina_name not in schedine_store:
+        active_schedina_name = list(schedine_store.keys())[0] if schedine_store else "Schedina Principale"
+        if active_schedina_name not in schedine_store:
+            schedine_store[active_schedina_name] = {}
+
+    favorites = schedine_store[active_schedina_name]
+
+def save_schedine_data():
+    global schedine_store, favorites, active_schedina_name
     try:
+        schedine_store[active_schedina_name] = favorites
+        payload = {
+            "active": active_schedina_name,
+            "schedine": schedine_store
+        }
+        with open(SCHEDINE_FILE, "w", encoding="utf-8") as f:
+            json.dump(payload, f, indent=2, ensure_ascii=False)
+        # Sincronizza anche con FAV_FILE per retrocompatibilità desktop
         with open(FAV_FILE, "w", encoding="utf-8") as f:
             json.dump(favorites, f, indent=2, ensure_ascii=False)
-    except Exception: pass
+    except Exception:
+        pass
+
+def load_saved_favorites():
+    load_schedine_data()
+
+def save_favorites():
+    save_schedine_data()
+
+def calcola_quota_effettiva(m):
+    q = m.get("odds")
+    if not q:
+        return 1.00
+    chosen = m.get("custom_pick") or m.get("raw_pick") or "1"
+    sp = m.get("sport", "Calcio")
+    try:
+        if sp == "Calcio" and len(q) == 3:
+            q1, qx, q2 = float(q[0]), float(q[1]), float(q[2])
+            if chosen == "1": return q1
+            elif chosen == "X": return qx
+            elif chosen == "2": return q2
+            elif chosen == "1X": return round(1.0 / ((1.0/q1) + (1.0/qx)), 2)
+            elif chosen == "X2": return round(1.0 / ((1.0/qx) + (1.0/q2)), 2)
+            elif chosen == "12": return round(1.0 / ((1.0/q1) + (1.0/q2)), 2)
+            return q1
+        elif sp == "Tennis" and len(q) >= 2:
+            q1, q2 = float(q[0]), float(q[1])
+            if "2" in chosen: return q2
+            return q1
+    except Exception:
+        pass
+    return 1.00
 
 def elabora_algoritmo(m):
     q = m.get("odds")
@@ -501,25 +629,34 @@ def elabora_algoritmo(m):
         m["pick_title"] = "In attesa delle quote ufficiali"
         m["summary_lines"] = ["• Quote al momento non disponibili sul feed"]
         m["full_report"] = ["Quote non disponibili."]
+        m["raw_pick"] = None
+        m["effective_quota"] = 1.00
         return
     sp = m.get("sport", "Calcio")
     if sp == "Calcio" and len(q) == 3:
         res = analizza_calcio(fb_db, q[0], q[1], q[2])
         if res:
-            livello, titolo, summ, full = report_calcio(res, q)
+            livello, verdetto, summ, full = report_calcio(res, q)
             icon = "🎯" if livello == "ok" else ("⚠️" if livello == "warn" else "🚨")
+            m["livello"] = livello
+            m["raw_pick"] = res["pick"]
             m["pick_str"] = f"{icon} {res['pick']} ({res['pick_pct']:.1f}%)"
-            m["pick_title"] = titolo
+            m["pick_title"] = verdetto
             m["summary_lines"] = summ
             m["full_report"] = full
     elif sp == "Tennis" and len(q) >= 2:
         res = analizza_tennis(tn_db, q[0], q[1])
         if res:
-            livello, titolo, summ, full = report_tennis(res, q)
-            m["pick_str"] = f"🎯 {titolo}"
-            m["pick_title"] = titolo
+            livello, verdetto, summ, full = report_tennis(res, q)
+            icon = "🎯" if livello == "ok" else ("⚠️" if livello == "warn" else "🚨")
+            m["livello"] = livello
+            m["raw_pick"] = res["pick"]
+            m["pick_str"] = f"{icon} {res['pick']} ({res['pick_pct']:.1f}%)"
+            m["pick_title"] = verdetto
             m["summary_lines"] = summ
             m["full_report"] = full
+
+    m["effective_quota"] = calcola_quota_effettiva(m)
 
 # Precarica
 load_saved_favorites()
@@ -527,8 +664,15 @@ for m in favorites.values():
     elabora_algoritmo(m)
 
 # =====================================================================
-#  ROTTE API E INTERFACCIA WEB
+#  ROTTE API E INTERFACCIA WEB (CON HEADER ZERO-CACHE)
 # =====================================================================
+@app.after_request
+def add_header(response):
+    response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate, max-age=0"
+    response.headers["Pragma"] = "no-cache"
+    response.headers["Expires"] = "0"
+    return response
+
 @app.route("/")
 def index():
     return render_mobile_html()
@@ -536,9 +680,15 @@ def index():
 @app.route("/api/data")
 def api_data():
     fav_list = list(favorites.values())
+    tot_quota = 1.0
+    for m in fav_list:
+        tot_quota *= m.get("effective_quota", 1.0)
     return jsonify({
         "count": len(fav_list),
         "favorites": fav_list,
+        "active_schedina": active_schedina_name,
+        "schedine_list": list(schedine_store.keys()),
+        "total_quota": round(tot_quota, 2),
         "timestamp": datetime.datetime.now().strftime("%H:%M:%S")
     })
 
@@ -625,7 +775,7 @@ def api_add():
         elabora_algoritmo(match_item)
         favorites[mid] = match_item
         save_favorites()
-        return jsonify({"status": "ok", "match": match_item})
+        return jsonify({"status": "ok", "match": match_item, "count": len(favorites)})
     return jsonify({"status": "error", "message": "Incontro non trovato su Flashscore"}), 404
 
 @app.route("/api/remove", methods=["POST"])
@@ -635,28 +785,131 @@ def api_remove():
     if mid and mid in favorites:
         del favorites[mid]
         save_favorites()
-        return jsonify({"status": "ok"})
+        return jsonify({"status": "ok", "count": len(favorites)})
     return jsonify({"status": "error"}), 400
+
+@app.route("/api/clear", methods=["POST"])
+def api_clear():
+    global favorites
+    favorites.clear()
+    save_favorites()
+    return jsonify({"status": "ok", "count": 0, "message": "Schedina svuotata con successo!"})
+
+@app.route("/api/update_match", methods=["POST"])
+def api_update_match():
+    global favorites
+    data = request.get_json(silent=True) or request.form
+    mid = data.get("mid")
+    if not mid or mid not in favorites:
+        return jsonify({"status": "error", "message": "Partita non trovata"}), 404
+
+    odds = data.get("odds")
+    if odds and isinstance(odds, list) and len(odds) in (2, 3):
+        try:
+            favorites[mid]["odds"] = [float(x) for x in odds]
+            favorites[mid]["odds_str"] = " / ".join(f"{float(x):.2f}" for x in odds)
+        except Exception:
+            pass
+
+    custom_pick = data.get("custom_pick")
+    if custom_pick is not None:
+        favorites[mid]["custom_pick"] = str(custom_pick).strip()
+
+    elabora_algoritmo(favorites[mid])
+    save_favorites()
+    return jsonify({"status": "ok", "match": favorites[mid]})
+
+@app.route("/api/recalculate", methods=["POST"])
+def api_recalculate():
+    global favorites
+    for m in favorites.values():
+        elabora_algoritmo(m)
+    save_favorites()
+    return jsonify({"status": "ok", "count": len(favorites)})
+
+@app.route("/api/schedine/save", methods=["POST"])
+def api_schedine_save():
+    global active_schedina_name, schedine_store, favorites
+    data = request.get_json(silent=True) or request.form
+    name = (data.get("name") or "").strip()
+    if not name:
+        return jsonify({"status": "error", "message": "Nome schedina obbligatorio"}), 400
+    active_schedina_name = name
+    schedine_store[name] = dict(favorites)
+    save_schedine_data()
+    return jsonify({"status": "ok", "name": name, "schedine_list": list(schedine_store.keys())})
+
+@app.route("/api/schedine/load", methods=["POST"])
+def api_schedine_load():
+    global active_schedina_name, schedine_store, favorites
+    data = request.get_json(silent=True) or request.form
+    name = (data.get("name") or "").strip()
+    if not name or name not in schedine_store:
+        return jsonify({"status": "error", "message": "Schedina non trovata"}), 404
+    active_schedina_name = name
+    favorites = schedine_store[name]
+    save_schedine_data()
+    return jsonify({
+        "status": "ok",
+        "name": name,
+        "count": len(favorites),
+        "favorites": list(favorites.values())
+    })
+
+@app.route("/api/schedine/delete", methods=["POST"])
+def api_schedine_delete():
+    global active_schedina_name, schedine_store, favorites
+    data = request.get_json(silent=True) or request.form
+    name = (data.get("name") or "").strip()
+    if not name or name not in schedine_store:
+        return jsonify({"status": "error", "message": "Schedina non trovata"}), 404
+    if len(schedine_store) <= 1:
+        favorites.clear()
+        save_schedine_data()
+        return jsonify({"status": "ok", "message": "Schedina svuotata (unica presente)"})
+    del schedine_store[name]
+    if active_schedina_name == name:
+        active_schedina_name = list(schedine_store.keys())[0]
+        favorites = schedine_store[active_schedina_name]
+    save_schedine_data()
+    return jsonify({
+        "status": "ok",
+        "active": active_schedina_name,
+        "schedine_list": list(schedine_store.keys())
+    })
 
 @app.route("/download/schedina.txt")
 def download_schedina():
-    lines = ["=== SCHEDINA PREFERITI (QUOTE BOOSTER) ==="]
+    tot_quota = 1.0
+    lines = [
+        f"=== {active_schedina_name.upper()} (QUOTE BOOSTER) ===",
+        f"Data creazione: {datetime.datetime.now().strftime('%d/%m/%Y %H:%M')}",
+        "=" * 45
+    ]
     for m in favorites.values():
+        eq = m.get("effective_quota", 1.0)
+        tot_quota *= eq
+        pick_display = m.get("custom_pick") or m.get("raw_pick") or "N.D."
         lines.append(f"• {m.get('time', '--:--')} | {m.get('league', '')}")
         lines.append(f"  {m.get('home', '')} vs {m.get('away', '')}  [{m.get('score', '-:-')}]")
-        lines.append(f"  Quote: {m.get('odds_str', 'N.D.')}")
-        if m.get('pick_str'):
-            lines.append(f"  Pronostico: {m.get('pick_str')} - {m.get('pick_title', '')}")
-        lines.append("-" * 35)
+        lines.append(f"  Quote Ufficiali: {m.get('odds_str', 'N.D.')}")
+        lines.append(f"  Pronostico Algoritmo: {m.get('pick_title', '')}")
+        lines.append(f"  🎯 ESITO IN SCHEDINA: {pick_display}  (Quota: @{eq:.2f})")
+        lines.append("-" * 45)
+
+    lines.append(f"NUMERO PARTITE: {len(favorites)}")
+    lines.append(f"MOLTIPLICATORE QUOTA TOTALE: @{tot_quota:.2f}")
+    lines.append(f"SIMULAZIONE PUNTATA 10€ -> VINCITA: {tot_quota * 10:.2f}€")
     text = "\n".join(lines)
     return Response(
         text,
         mimetype="text/plain; charset=utf-8",
-        headers={"Content-Disposition": "attachment; filename=schedina_preferiti.txt"}
+        headers={"Content-Disposition": f"attachment; filename=schedina_{active_schedina_name.replace(' ', '_')}.txt"}
     )
 
 def render_mobile_html():
     fav_cards_html = []
+    tot_quota = 1.0
     for m in favorites.values():
         mid = m.get("id")
         home = m.get("home", "Casa")
@@ -673,6 +926,31 @@ def render_mobile_html():
         score_badge = f'<span class="score">{score}</span>' if score and score != "- : -" else ""
         full_rep_text = "\n".join(str(x) for x in m.get("full_report", []))
         details_block = f'<button class="details-btn" onclick="toggleDetails(this)">Visualizza Analisi Completa ▼</button><div class="details-panel">{full_rep_text}</div>' if full_rep_text else ''
+        eq = m.get("effective_quota", 1.0)
+        tot_quota *= eq
+        current_pick = m.get("custom_pick") or m.get("raw_pick") or ""
+
+        # Bottoni selezione esito schedina
+        if sport == "Calcio":
+            pick_pills = f'''
+            <div class="pick-selector">
+                <span class="pick-sel-lbl">Esito Schedina (@{eq:.2f}):</span>
+                <button class="pick-btn {'active' if current_pick == '1' else ''}" onclick="cambiaEsito('{mid}', '1')">1</button>
+                <button class="pick-btn {'active' if current_pick == 'X' else ''}" onclick="cambiaEsito('{mid}', 'X')">X</button>
+                <button class="pick-btn {'active' if current_pick == '2' else ''}" onclick="cambiaEsito('{mid}', '2')">2</button>
+                <button class="pick-btn {'active' if current_pick == '1X' else ''}" onclick="cambiaEsito('{mid}', '1X')">1X</button>
+                <button class="pick-btn {'active' if current_pick == 'X2' else ''}" onclick="cambiaEsito('{mid}', 'X2')">X2</button>
+                <button class="pick-btn {'active' if current_pick == '12' else ''}" onclick="cambiaEsito('{mid}', '12')">12</button>
+            </div>
+            '''
+        else:
+            pick_pills = f'''
+            <div class="pick-selector">
+                <span class="pick-sel-lbl">Esito Schedina (@{eq:.2f}):</span>
+                <button class="pick-btn {'active' if '1' in current_pick else ''}" onclick="cambiaEsito('{mid}', 'G1')">G1</button>
+                <button class="pick-btn {'active' if '2' in current_pick else ''}" onclick="cambiaEsito('{mid}', 'G2')">G2</button>
+            </div>
+            '''
 
         card_html = f'''
         <div class="card" id="card_{mid}">
@@ -682,30 +960,36 @@ def render_mobile_html():
             </div>
             <div class="teams">{home} vs {away} {score_badge}</div>
             <div class="odds-row">
-                <div class="odd-pill"><div class="odd-lbl">QUOTE REALI</div><div class="odd-val">{odds_str}</div></div>
+                <div class="odd-pill">
+                    <div class="odd-lbl">QUOTE UFFICIALI</div>
+                    <div class="odd-val">{odds_str}</div>
+                </div>
+                <button class="btn-edit-odds" onclick="apriModificaQuote('{mid}', '{odds_str}', '{sport}')">✏️ Modifica Quote</button>
             </div>
             <div class="pick-box">
                 <div class="pick-tag">{pick_str}</div>
                 <div style="font-size: 11px; font-weight:700; color: #f8fafc; margin-bottom: 4px;">{pick_title}</div>
                 <div class="pick-lines">{summary}</div>
+                {pick_pills}
                 {details_block}
             </div>
-            <div style="text-align: right; margin-top: 6px;">
-                <button onclick="rimuoviPartita('{mid}')" style="background:none; border:none; color:#ef4444; font-size:11px; font-weight:700; cursor:pointer;">✕ Rimuovi dai Preferiti</button>
+            <div style="text-align: right; margin-top: 8px;">
+                <button onclick="rimuoviPartita('{mid}')" class="btn-remove">✕ Rimuovi dalla Schedina</button>
             </div>
         </div>
         '''
         fav_cards_html.append(card_html)
 
-    cards_content = "\n".join(fav_cards_html) if fav_cards_html else '<div style="text-align:center; padding: 40px 20px; color: var(--dim);">Nessuna partita preferita attualmente salvata.<br><br>👉 Vai nella scheda <b>⚽ Palinsesto Oggi</b> per scegliere le partite con 1 tap!</div>'
+    cards_content = "\n".join(fav_cards_html) if fav_cards_html else '<div class="empty-slip-box"><span>📋 Schedina Attualmente Vuota</span><p>Tocca <b>⚽ Palinsesto Oggi</b> per aggiungere le partite con 1 tap, oppure incolla un link Diretta/Flashscore qui sopra!</p></div>'
     n_fav = len(favorites)
+    schedine_options = "".join(f'<option value="{name}" {"selected" if name == active_schedina_name else ""}>{name} ({len(schedine_store.get(name, {}))})</option>' for name in schedine_store)
 
     return f'''<!DOCTYPE html>
 <html lang="it">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Quote Booster Cloud</title>
+    <title>Quote Booster Pro - Gestione Schedine</title>
     <meta name="theme-color" content="#0b0f19">
     <style>
         :root {{
@@ -726,7 +1010,7 @@ def render_mobile_html():
             background: var(--bg);
             color: var(--txt);
             padding: 10px;
-            padding-bottom: 80px;
+            padding-bottom: 90px;
             line-height: 1.4;
         }}
         .header {{
@@ -739,7 +1023,7 @@ def render_mobile_html():
             border: 1px solid var(--border);
             margin-bottom: 10px;
         }}
-        .logo {{ font-size: 15px; font-weight: 800; color: var(--acc); }}
+        .logo {{ font-size: 15px; font-weight: 800; color: var(--acc); display: flex; align-items: center; gap: 6px; }}
         .live-tag {{
             font-size: 11px;
             font-weight: 700;
@@ -752,6 +1036,86 @@ def render_mobile_html():
             gap: 4px;
         }}
         .live-dot {{ width: 6px; height: 6px; background: var(--green); border-radius: 50%; display: inline-block; }}
+
+        /* Bar Gestione Multi-Schedine */
+        .schedine-bar {{
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 8px 10px;
+            margin-bottom: 10px;
+            display: flex;
+            gap: 6px;
+            align-items: center;
+            flex-wrap: wrap;
+        }}
+        .schedina-select {{
+            flex: 1;
+            min-width: 140px;
+            background: var(--card-sub);
+            color: var(--txt);
+            border: 1px solid var(--border);
+            padding: 6px 10px;
+            border-radius: 8px;
+            font-size: 12px;
+            font-weight: 700;
+        }}
+        .btn-mini {{
+            background: var(--card-sub);
+            color: var(--txt);
+            border: 1px solid var(--border);
+            padding: 6px 10px;
+            border-radius: 8px;
+            font-size: 11px;
+            font-weight: 700;
+            cursor: pointer;
+            white-space: nowrap;
+        }}
+        .btn-mini:hover {{ border-color: var(--acc); color: var(--acc); }}
+
+        /* Box Statistiche Quota & Vincita Schedina */
+        .schedina-summary-box {{
+            background: linear-gradient(135deg, rgba(30, 41, 59, 0.9), rgba(15, 23, 42, 0.9));
+            border: 1px solid rgba(56, 189, 248, 0.3);
+            border-radius: 12px;
+            padding: 10px 12px;
+            margin-bottom: 12px;
+            box-shadow: 0 4px 14px rgba(0,0,0,0.3);
+        }}
+        .schedina-summary-row {{
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 8px;
+        }}
+        .summary-badge {{
+            display: flex;
+            flex-direction: column;
+        }}
+        .summary-badge .lbl {{ font-size: 9px; text-transform: uppercase; color: var(--dim); font-weight: 700; }}
+        .summary-badge .val {{ font-size: 16px; font-weight: 800; color: #fff; }}
+        .summary-badge .val.highlight {{ color: var(--acc); }}
+        .summary-badge .val.win {{ color: var(--green); }}
+        .stake-wrap {{
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            background: rgba(0,0,0,0.25);
+            padding: 4px 8px;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+        }}
+        .stake-input {{
+            width: 44px;
+            background: none;
+            border: none;
+            color: #fff;
+            font-size: 13px;
+            font-weight: 800;
+            text-align: center;
+            outline: none;
+        }}
 
         /* Tabs Navigazione */
         .tabs-nav {{
@@ -768,13 +1132,12 @@ def render_mobile_html():
             padding: 9px 6px;
             border: none;
             border-radius: 8px;
+            background: transparent;
+            color: var(--dim);
             font-size: 12px;
             font-weight: 700;
             cursor: pointer;
-            background: transparent;
-            color: var(--dim);
             transition: all 0.2s;
-            text-align: center;
         }}
         .tab-btn.active {{
             background: var(--acc);
@@ -782,32 +1145,40 @@ def render_mobile_html():
             box-shadow: 0 2px 8px rgba(56, 189, 248, 0.3);
         }}
 
-        .actions-bar {{ display: flex; gap: 8px; margin-bottom: 12px; }}
-        .btn {{
-            flex: 1;
-            padding: 10px 6px;
-            border-radius: 10px;
-            border: none;
-            font-size: 12px;
-            font-weight: 700;
-            cursor: pointer;
-            text-align: center;
-            text-decoration: none;
+        /* Barra Azioni Schedina */
+        .actions-bar {{
             display: flex;
+            gap: 6px;
+            margin-bottom: 12px;
+            flex-wrap: wrap;
+        }}
+        .btn {{
+            padding: 8px 12px;
+            border-radius: 8px;
+            font-size: 11px;
+            font-weight: 700;
+            border: none;
+            cursor: pointer;
+            display: inline-flex;
             align-items: center;
             justify-content: center;
             gap: 4px;
+            text-decoration: none;
+            transition: opacity 0.2s;
         }}
+        .btn:active {{ opacity: 0.8; }}
         .btn-green {{ background: var(--green); color: #0b0f19; }}
         .btn-sky {{ background: var(--acc); color: #0b0f19; }}
         .btn-dim {{ background: var(--card-sub); color: var(--txt); border: 1px solid var(--border); }}
-        .btn:active {{ opacity: 0.8; transform: scale(0.98); }}
+        .btn-red {{ background: rgba(239, 68, 68, 0.2); color: var(--red); border: 1px solid var(--red); }}
+        .btn-red:hover {{ background: var(--red); color: #fff; }}
 
+        /* Add Input */
         .add-box {{
             background: var(--card);
-            border: 1px solid var(--border);
+            padding: 8px;
             border-radius: 12px;
-            padding: 10px;
+            border: 1px solid var(--border);
             margin-bottom: 12px;
         }}
         .add-form {{ display: flex; gap: 6px; }}
@@ -815,145 +1186,194 @@ def render_mobile_html():
             flex: 1;
             background: var(--card-sub);
             border: 1px solid var(--border);
-            border-radius: 8px;
             color: var(--txt);
-            padding: 8px 10px;
+            padding: 8px 12px;
+            border-radius: 8px;
             font-size: 12px;
             outline: none;
         }}
 
+        /* Cards Schedina */
         .cards-list {{ display: flex; flex-direction: column; gap: 10px; }}
         .card {{
             background: var(--card);
             border: 1px solid var(--border);
             border-radius: 14px;
             padding: 12px;
+            position: relative;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.25);
         }}
         .card-top {{
             display: flex;
             justify-content: space-between;
             align-items: center;
-            font-size: 11px;
-            color: var(--dim);
             margin-bottom: 6px;
         }}
-        .league-badge {{
-            background: rgba(56, 189, 248, 0.12);
-            color: var(--acc);
-            padding: 2px 6px;
-            border-radius: 6px;
-            font-weight: 600;
-        }}
-        .match-time {{ font-weight: 700; color: var(--amber); }}
-        .teams {{ font-size: 14px; font-weight: 700; color: var(--txt); margin-bottom: 8px; }}
-        .score {{ color: var(--green); margin-left: 6px; }}
-        .odds-row {{ display: flex; gap: 6px; margin-bottom: 10px; }}
-        .odd-pill {{
-            flex: 1;
+        .league-badge {{ font-size: 10px; color: var(--dim); font-weight: 700; text-transform: uppercase; }}
+        .match-time {{ font-size: 11px; color: var(--acc); font-weight: 700; }}
+        .teams {{ font-size: 14px; font-weight: 800; color: #fff; margin-bottom: 8px; }}
+        .score {{ color: var(--red); font-weight: 800; margin-left: 6px; }}
+        .odds-row {{
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
             background: var(--card-sub);
-            border: 1px solid rgba(255,255,255,0.06);
+            padding: 6px 10px;
             border-radius: 8px;
-            padding: 6px 8px;
-            text-align: center;
-            font-size: 11px;
+            margin-bottom: 8px;
         }}
-        .odd-lbl {{ color: var(--dim); font-size: 10px; font-weight: 600; }}
-        .odd-val {{ font-weight: 700; color: var(--txt); margin-top: 2px; }}
+        .odd-pill {{ display: flex; flex-direction: column; }}
+        .odd-lbl {{ font-size: 9px; color: var(--dim); font-weight: 700; }}
+        .odd-val {{ font-size: 12px; font-weight: 800; color: #fff; letter-spacing: 0.5px; }}
+        .btn-edit-odds {{
+            background: none;
+            border: 1px solid var(--border);
+            color: var(--acc);
+            padding: 4px 8px;
+            border-radius: 6px;
+            font-size: 10px;
+            font-weight: 700;
+            cursor: pointer;
+        }}
+        .btn-edit-odds:hover {{ border-color: var(--acc); }}
+
+        /* Pick Box */
         .pick-box {{
-            background: linear-gradient(135deg, rgba(34,197,94,0.1) 0%, rgba(56,189,248,0.1) 100%);
-            border: 1px solid rgba(34,197,94,0.3);
+            background: rgba(15, 23, 42, 0.6);
+            border: 1px solid rgba(56, 189, 248, 0.25);
             border-radius: 10px;
-            padding: 10px;
+            padding: 8px 10px;
         }}
-        .pick-tag {{ font-size: 13px; font-weight: 800; color: var(--green); margin-bottom: 4px; }}
-        .pick-lines {{ font-size: 11px; color: var(--dim); line-height: 1.4; }}
+        .pick-tag {{
+            display: inline-block;
+            background: var(--acc);
+            color: #0b0f19;
+            font-size: 11px;
+            font-weight: 800;
+            padding: 2px 7px;
+            border-radius: 6px;
+            margin-bottom: 4px;
+        }}
+        .pick-lines {{ font-size: 10px; color: var(--dim); line-height: 1.4; margin-bottom: 6px; }}
+
+        /* Selettore Esito */
+        .pick-selector {{
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            margin-top: 6px;
+            padding-top: 6px;
+            border-top: 1px solid rgba(255,255,255,0.08);
+            flex-wrap: wrap;
+        }}
+        .pick-sel-lbl {{ font-size: 10px; color: #fff; font-weight: 700; margin-right: 4px; }}
+        .pick-btn {{
+            background: var(--card-sub);
+            border: 1px solid var(--border);
+            color: var(--dim);
+            padding: 3px 8px;
+            border-radius: 6px;
+            font-size: 10px;
+            font-weight: 800;
+            cursor: pointer;
+        }}
+        .pick-btn.active {{
+            background: var(--green);
+            color: #0b0f19;
+            border-color: var(--green);
+        }}
+
+        /* Dettagli Algoritmo */
         .details-btn {{
             background: none;
             border: none;
             color: var(--acc);
-            font-size: 11px;
-            font-weight: 600;
-            margin-top: 6px;
+            font-size: 10px;
+            font-weight: 700;
             cursor: pointer;
-            text-decoration: underline;
+            padding: 4px 0 0 0;
+            display: block;
         }}
         .details-panel {{
             display: none;
-            margin-top: 8px;
-            padding-top: 8px;
-            border-top: 1px solid rgba(255,255,255,0.08);
-            font-size: 11px;
-            color: #cbd5e1;
-            white-space: pre-line;
+            margin-top: 6px;
+            padding: 8px;
+            background: #0b0f19;
+            border-radius: 6px;
             font-family: monospace;
+            font-size: 10px;
+            white-space: pre-wrap;
+            color: #cbd5e1;
+            border: 1px solid var(--border);
         }}
+        .btn-remove {{
+            background: none;
+            border: none;
+            color: var(--red);
+            font-size: 11px;
+            font-weight: 700;
+            cursor: pointer;
+        }}
+        .btn-remove:hover {{ text-decoration: underline; }}
 
-        /* Palinsesto Items */
-        .pal-filter-pills {{
-            display: flex;
-            gap: 6px;
-            margin-bottom: 10px;
-            overflow-x: auto;
-            padding-bottom: 2px;
+        .empty-slip-box {{
+            text-align: center;
+            padding: 35px 20px;
+            background: var(--card);
+            border-radius: 14px;
+            border: 1px dashed var(--border);
+            color: var(--dim);
         }}
+        .empty-slip-box span {{ font-size: 14px; font-weight: 800; color: #fff; display: block; margin-bottom: 6px; }}
+        .empty-slip-box p {{ font-size: 11px; line-height: 1.5; }}
+
+        /* Palinsesto */
+        .pal-filter-pills {{ display: flex; gap: 6px; margin-bottom: 10px; overflow-x: auto; padding-bottom: 2px; }}
         .pill-btn {{
-            background: var(--card-sub);
+            background: var(--card);
             border: 1px solid var(--border);
             color: var(--dim);
-            padding: 6px 14px;
+            padding: 6px 12px;
             border-radius: 20px;
             font-size: 11px;
             font-weight: 700;
             cursor: pointer;
             white-space: nowrap;
-            transition: all 0.2s ease;
         }}
-        .pill-btn.active {{
-            background: rgba(14, 165, 233, 0.2);
-            border-color: var(--acc);
-            color: var(--acc);
-        }}
-        .pal-league-hdr {{
-            background: rgba(30, 41, 59, 0.85);
-            border-left: 3px solid var(--acc);
-            color: #f1f5f9;
-            padding: 7px 12px;
-            font-size: 11px;
-            font-weight: 800;
-            border-radius: 6px;
-            margin-top: 12px;
-            margin-bottom: 6px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            letter-spacing: 0.3px;
-        }}
-        .pal-league-hdr.top {{
-            border-left-color: #f59e0b;
-            background: rgba(245, 158, 11, 0.14);
-            color: #fbbf24;
-        }}
+        .pill-btn.active {{ background: var(--acc); color: #0b0f19; border-color: var(--acc); }}
         .pal-search {{
             width: 100%;
-            background: var(--card-sub);
+            background: var(--card);
             border: 1px solid var(--border);
-            border-radius: 10px;
             color: var(--txt);
-            padding: 9px 12px;
-            font-size: 13px;
+            padding: 8px 12px;
+            border-radius: 10px;
+            font-size: 12px;
             outline: none;
             margin-bottom: 10px;
         }}
-        .pal-card {{
-            background: var(--card);
-            border: 1px solid var(--border);
-            border-radius: 12px;
-            padding: 10px;
-            margin-bottom: 8px;
+        .pal-league-hdr {{
+            background: var(--card-sub);
+            padding: 6px 10px;
+            border-radius: 8px;
+            font-size: 11px;
+            font-weight: 800;
+            color: var(--txt);
+            margin: 10px 0 6px 0;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            gap: 10px;
+        }}
+        .pal-league-hdr.top {{ border-left: 3px solid #f59e0b; background: rgba(245, 158, 11, 0.12); }}
+        .pal-card {{
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 8px 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 6px;
         }}
         .pal-info {{ flex: 1; }}
         .pal-teams {{ font-size: 13px; font-weight: 700; color: var(--txt); margin: 3px 0; }}
@@ -995,27 +1415,63 @@ def render_mobile_html():
 </head>
 <body>
     <div class="header">
-        <div class="logo">⚡ QUOTE BOOSTER CLOUD</div>
-        <div class="live-tag"><span class="live-dot"></span> ATTIVO 24/7</div>
+        <div class="logo">⚡ QUOTE BOOSTER PRO</div>
+        <div class="live-tag"><span class="live-dot"></span> LIVE 24/7</div>
+    </div>
+
+    <!-- SELETTORE MULTI-SCHEDINE -->
+    <div class="schedine-bar">
+        <select id="selSchedina" class="schedina-select" onchange="cambiaSchedina(this.value)">
+            {schedine_options}
+        </select>
+        <button class="btn-mini" onclick="creaNuovaSchedina()">➕ Nuova</button>
+        <button class="btn-mini" onclick="salvaSchedinaConNome()">💾 Salva con nome</button>
+        <button class="btn-mini" style="color:var(--red);" onclick="eliminaSchedinaCorrente()">🗑️ Elimina</button>
     </div>
 
     <!-- TABS -->
     <div class="tabs-nav">
-        <button id="btnTabFav" class="tab-btn active" onclick="switchTab('fav')">⭐ I Miei Preferiti ({n_fav})</button>
+        <button id="btnTabFav" class="tab-btn active" onclick="switchTab('fav')">⭐ Schedina Attiva (<span id="tabCount">{n_fav}</span>)</button>
         <button id="btnTabPal" class="tab-btn" onclick="switchTab('pal')">⚽ Palinsesto Oggi</button>
     </div>
 
-    <!-- SEZIONE PREFERITI -->
+    <!-- SEZIONE SCHEDINA ATTIVA -->
     <div id="sectionFav">
+        <!-- BOX MOLTIPLICATORE & VINCITA -->
+        <div class="schedina-summary-box">
+            <div class="schedina-summary-row">
+                <div class="summary-badge">
+                    <span class="lbl">Partite in Schedina</span>
+                    <span id="statCount" class="val">{n_fav}</span>
+                </div>
+                <div class="summary-badge">
+                    <span class="lbl">Moltiplicatore Quota</span>
+                    <span id="statQuota" class="val highlight">@{tot_quota:.2f}</span>
+                </div>
+                <div class="summary-badge">
+                    <span class="lbl">Puntata Simulazione</span>
+                    <div class="stake-wrap">
+                        <input type="number" id="inpStake" class="stake-input" value="10" min="1" step="1" oninput="aggiornaCalcoloVincita()">
+                        <span style="font-size:12px; font-weight:700;">€</span>
+                    </div>
+                </div>
+                <div class="summary-badge">
+                    <span class="lbl">Vincita Stimata</span>
+                    <span id="statVincita" class="val win">€ {tot_quota * 10:.2f}</span>
+                </div>
+            </div>
+        </div>
+
         <div class="actions-bar">
             <button class="btn btn-green" onclick="copiaSchedina()">📋 Copia Schedina</button>
             <a class="btn btn-sky" href="/download/schedina.txt" download>📥 Scarica .txt</a>
-            <button class="btn btn-dim" onclick="location.reload()">🔄 Ricarica</button>
+            <button class="btn btn-dim" onclick="ricalcolaTutto()">🔄 Ricalcola Quote</button>
+            <button class="btn btn-red" onclick="svuotaSchedina()">🗑️ Svuota Schedina</button>
         </div>
 
         <div class="add-box">
             <form class="add-form" onsubmit="aggiungiPartita(event)">
-                <input type="text" id="addInput" class="input-url" placeholder="Incolla link Diretta/Flashscore o ID..." required>
+                <input type="text" id="addInput" class="input-url" placeholder="Incolla link Diretta/Flashscore o ID partita..." required>
                 <button type="submit" class="btn btn-sky" style="flex: 0 0 80px;">Aggiungi</button>
             </form>
         </div>
@@ -1034,7 +1490,7 @@ def render_mobile_html():
             <button class="pill-btn" id="pillTop" onclick="setSportFilter('TOP')">🔥 Principali</button>
         </div>
         <input type="text" id="palSearchInput" class="pal-search" placeholder="🔍 Cerca squadra o torneo di oggi..." oninput="applicaFiltriPalinsesto()">
-        <div style="font-size: 11px; color: var(--dim); margin-bottom: 8px;">Tocca <b>⭐ Aggiungi</b> per calcolare il pronostico all'istante:</div>
+        <div style="font-size: 11px; color: var(--dim); margin-bottom: 8px;">Tocca <b>⭐ Aggiungi</b> per inserire il match e calcolare il pronostico originale:</div>
         <div id="palinsestoContainer" class="cards-list">
             <div style="text-align: center; padding: 20px; color: var(--dim);">Caricamento palinsesto in corso...</div>
         </div>
@@ -1046,12 +1502,19 @@ def render_mobile_html():
         let palinsestoData = [];
         let favIds = {list(favorites.keys())};
         let currentSportFilter = 'ALL';
+        let currentTotalQuota = {tot_quota};
 
         function showToast(msg) {{
             const t = document.getElementById('toast');
             t.innerText = msg;
             t.style.display = 'block';
             setTimeout(() => {{ t.style.display = 'none'; }}, 2500);
+        }}
+
+        function aggiornaCalcoloVincita() {{
+            const stake = parseFloat(document.getElementById('inpStake').value) || 0;
+            const win = currentTotalQuota * stake;
+            document.getElementById('statVincita').innerText = '€ ' + win.toFixed(2);
         }}
 
         function switchTab(tab) {{
@@ -1102,7 +1565,7 @@ def render_mobile_html():
         async function caricaPalinsesto() {{
             const container = document.getElementById('palinsestoContainer');
             try {{
-                const res = await fetch('/api/palinsesto');
+                const res = await fetch('/api/palinsesto?_t=' + Date.now());
                 const data = await res.json();
                 palinsestoData = data.matches || [];
                 applicaFiltriPalinsesto();
@@ -1154,19 +1617,20 @@ def render_mobile_html():
             const btn = document.getElementById('btn_pal_' + mid);
             if (btn) btn.innerText = 'Elaborazione...';
             try {{
-                const res = await fetch('/api/add', {{
+                const res = await fetch('/api/add?_t=' + Date.now(), {{
                     method: 'POST',
                     headers: {{ 'Content-Type': 'application/json' }},
                     body: JSON.stringify({{ url: mid }})
                 }});
                 const data = await res.json();
                 if (data.status === 'ok') {{
-                    favIds.push(mid);
+                    if (!favIds.includes(mid)) favIds.push(mid);
                     if (btn) {{
                         btn.classList.add('added');
                         btn.innerText = '✓ In Schedina';
                     }}
-                    showToast('✓ Aggiunta e analizzata nei Preferiti!');
+                    showToast('✓ Aggiunta alla Schedina!');
+                    aggiornaDatiSchedina();
                 }} else {{
                     if (btn) btn.innerText = '⭐ Aggiungi';
                     showToast('Errore: ' + data.message);
@@ -1190,7 +1654,7 @@ def render_mobile_html():
 
         async function copiaSchedina() {{
             try {{
-                const res = await fetch('/download/schedina.txt');
+                const res = await fetch('/download/schedina.txt?_t=' + Date.now());
                 const text = await res.text();
                 await navigator.clipboard.writeText(text);
                 showToast('✓ Schedina copiata negli appunti!');
@@ -1200,9 +1664,9 @@ def render_mobile_html():
         }}
 
         async function rimuoviPartita(mid) {{
-            if (!confirm('Rimuovere questa partita dai preferiti?')) return;
+            if (!confirm('Rimuovere questa partita dalla schedina?')) return;
             try {{
-                const res = await fetch('/api/remove', {{
+                const res = await fetch('/api/remove?_t=' + Date.now(), {{
                     method: 'POST',
                     headers: {{ 'Content-Type': 'application/json' }},
                     body: JSON.stringify({{ mid: mid }})
@@ -1212,11 +1676,191 @@ def render_mobile_html():
                     favIds = favIds.filter(id => id !== mid);
                     const el = document.getElementById('card_' + mid);
                     if (el) el.remove();
-                    showToast('Partita rimossa');
+                    const btnPal = document.getElementById('btn_pal_' + mid);
+                    if (btnPal) {{
+                        btnPal.classList.remove('added');
+                        btnPal.innerText = '⭐ Aggiungi';
+                    }}
+                    showToast('Partita rimossa dalla schedina');
+                    aggiornaDatiSchedina();
                 }}
             }} catch (err) {{
                 showToast('Errore durante la rimozione');
             }}
+        }}
+
+        async function svuotaSchedina() {{
+            if (!confirm('⚠️ Sei sicuro di voler CANCELLARE TUTTA la schedina corrente?')) return;
+            try {{
+                const res = await fetch('/api/clear?_t=' + Date.now(), {{
+                    method: 'POST',
+                    headers: {{ 'Content-Type': 'application/json' }}
+                }});
+                const data = await res.json();
+                if (data.status === 'ok') {{
+                    favIds = [];
+                    document.getElementById('cardsContainer').innerHTML = '<div class="empty-slip-box"><span>📋 Schedina Attualmente Vuota</span><p>Tocca <b>⚽ Palinsesto Oggi</b> per aggiungere le partite con 1 tap, oppure incolla un link Diretta/Flashscore qui sopra!</p></div>';
+                    document.querySelectorAll('.pal-btn-add').forEach(b => {{
+                        b.classList.remove('added');
+                        b.innerText = '⭐ Aggiungi';
+                    }});
+                    currentTotalQuota = 1.0;
+                    document.getElementById('statCount').innerText = '0';
+                    document.getElementById('tabCount').innerText = '0';
+                    document.getElementById('statQuota').innerText = '@1.00';
+                    aggiornaCalcoloVincita();
+                    showToast('✓ Tutta la schedina è stata cancellata!');
+                }}
+            }} catch (err) {{
+                showToast('Errore durante lo svuotamento');
+            }}
+        }}
+
+        async function cambiaEsito(mid, pick) {{
+            try {{
+                const res = await fetch('/api/update_match?_t=' + Date.now(), {{
+                    method: 'POST',
+                    headers: {{ 'Content-Type': 'application/json' }},
+                    body: JSON.stringify({{ mid: mid, custom_pick: pick }})
+                }});
+                const data = await res.json();
+                if (data.status === 'ok') {{
+                    showToast('✓ Esito aggiornato a ' + pick);
+                    setTimeout(() => location.reload(), 400);
+                }}
+            }} catch (err) {{
+                showToast('Errore aggiornamento esito');
+            }}
+        }}
+
+        async function apriModificaQuote(mid, quoteAttuali, sport) {{
+            const promptMsg = sport === 'Calcio' 
+                ? 'Inserisci le nuove quote 1 / X / 2 separate da spazio (es. 1.65 3.80 5.25):' 
+                : 'Inserisci le nuove quote G1 / G2 separate da spazio (es. 1.50 2.60):';
+            const val = prompt(promptMsg, quoteAttuali.split(' / ').join(' '));
+            if (!val) return;
+            const parts = val.trim().split(/\\s+/).map(x => parseFloat(x.replace(',', '.')));
+            if (parts.some(isNaN) || (sport === 'Calcio' && parts.length !== 3) || (sport === 'Tennis' && parts.length !== 2)) {{
+                alert('Formato quote non valido.');
+                return;
+            }}
+            try {{
+                const res = await fetch('/api/update_match?_t=' + Date.now(), {{
+                    method: 'POST',
+                    headers: {{ 'Content-Type': 'application/json' }},
+                    body: JSON.stringify({{ mid: mid, odds: parts }})
+                }});
+                const data = await res.json();
+                if (data.status === 'ok') {{
+                    showToast('✓ Quote aggiornate e pronostico ricalcolato!');
+                    setTimeout(() => location.reload(), 500);
+                }}
+            }} catch (err) {{
+                showToast('Errore aggiornamento quote');
+            }}
+        }}
+
+        async function ricalcolaTutto() {{
+            showToast('Ricalcolo quote e pronostici storici in corso...');
+            try {{
+                const res = await fetch('/api/recalculate?_t=' + Date.now(), {{ method: 'POST' }});
+                const data = await res.json();
+                if (data.status === 'ok') {{
+                    showToast('✓ Ricalcolo completato con algoritmo originale!');
+                    setTimeout(() => location.reload(), 400);
+                }}
+            }} catch (err) {{
+                showToast('Errore durante il ricalcolo');
+            }}
+        }}
+
+        async function creaNuovaSchedina() {{
+            const nome = prompt('Inserisci il nome per la nuova schedina (es. Schedina Raddoppio, Schedina Sabato):');
+            if (!nome || !nome.trim()) return;
+            try {{
+                await fetch('/api/clear?_t=' + Date.now(), {{ method: 'POST' }});
+                const res = await fetch('/api/schedine/save?_t=' + Date.now(), {{
+                    method: 'POST',
+                    headers: {{ 'Content-Type': 'application/json' }},
+                    body: JSON.stringify({{ name: nome.trim() }})
+                }});
+                const data = await res.json();
+                if (data.status === 'ok') {{
+                    showToast('✓ Creata nuova schedina: ' + nome);
+                    setTimeout(() => location.reload(), 400);
+                }}
+            }} catch (err) {{
+                showToast('Errore creazione schedina');
+            }}
+        }}
+
+        async function salvaSchedinaConNome() {{
+            const nome = prompt('Salva questa schedina con il nome:');
+            if (!nome || !nome.trim()) return;
+            try {{
+                const res = await fetch('/api/schedine/save?_t=' + Date.now(), {{
+                    method: 'POST',
+                    headers: {{ 'Content-Type': 'application/json' }},
+                    body: JSON.stringify({{ name: nome.trim() }})
+                }});
+                const data = await res.json();
+                if (data.status === 'ok') {{
+                    showToast('✓ Schedina salvata come: ' + nome);
+                    setTimeout(() => location.reload(), 400);
+                }}
+            }} catch (err) {{
+                showToast('Errore salvataggio schedina');
+            }}
+        }}
+
+        async function cambiaSchedina(nome) {{
+            try {{
+                const res = await fetch('/api/schedine/load?_t=' + Date.now(), {{
+                    method: 'POST',
+                    headers: {{ 'Content-Type': 'application/json' }},
+                    body: JSON.stringify({{ name: nome }})
+                }});
+                const data = await res.json();
+                if (data.status === 'ok') {{
+                    showToast('Caricamento: ' + nome);
+                    setTimeout(() => location.reload(), 300);
+                }}
+            }} catch (err) {{
+                showToast('Errore caricamento schedina');
+            }}
+        }}
+
+        async function eliminaSchedinaCorrente() {{
+            const sel = document.getElementById('selSchedina');
+            const nome = sel.value;
+            if (!confirm('Eliminare definitivamente la schedina \"' + nome + '\"?')) return;
+            try {{
+                const res = await fetch('/api/schedine/delete?_t=' + Date.now(), {{
+                    method: 'POST',
+                    headers: {{ 'Content-Type': 'application/json' }},
+                    body: JSON.stringify({{ name: nome }})
+                }});
+                const data = await res.json();
+                if (data.status === 'ok') {{
+                    showToast('Schedina eliminata');
+                    setTimeout(() => location.reload(), 400);
+                }}
+            }} catch (err) {{
+                showToast('Errore eliminazione schedina');
+            }}
+        }}
+
+        async function aggiornaDatiSchedina() {{
+            try {{
+                const res = await fetch('/api/data?_t=' + Date.now());
+                const data = await res.json();
+                favIds = data.favorites.map(m => m.id);
+                document.getElementById('statCount').innerText = data.count;
+                document.getElementById('tabCount').innerText = data.count;
+                document.getElementById('statQuota').innerText = '@' + (data.total_quota || 1.0).toFixed(2);
+                currentTotalQuota = data.total_quota || 1.0;
+                aggiornaCalcoloVincita();
+            }} catch (e) {{}}
         }}
 
         async function aggiungiPartita(e) {{
@@ -1224,18 +1868,18 @@ def render_mobile_html():
             const input = document.getElementById('addInput');
             const val = input.value.trim();
             if (!val) return;
-            showToast('Analisi partita in corso...');
+            showToast('Analisi partita in corso con algoritmo originale...');
             try {{
-                const res = await fetch('/api/add', {{
+                const res = await fetch('/api/add?_t=' + Date.now(), {{
                     method: 'POST',
                     headers: {{ 'Content-Type': 'application/json' }},
                     body: JSON.stringify({{ url: val }})
                 }});
                 const data = await res.json();
                 if (data.status === 'ok') {{
-                    showToast('✓ Partita aggiunta con pronostico!');
+                    showToast('✓ Partita analizzata e aggiunta alla Schedina!');
                     input.value = '';
-                    setTimeout(() => location.reload(), 800);
+                    setTimeout(() => location.reload(), 600);
                 }} else {{
                     showToast('Errore: ' + (data.message || 'Non trovata'));
                 }}
