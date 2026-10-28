@@ -163,6 +163,7 @@ def calcola_forma_calcio(home, away):
                 hist_a = v
                 break
 
+    # Ultime 5 partite generali
     rec_h = hist_h[-5:] if hist_h else []
     rec_a = hist_a[-5:] if hist_a else []
 
@@ -175,6 +176,27 @@ def calcola_forma_calcio(home, away):
     str_h = "-".join(trend_h) if trend_h else "N.D."
     str_a = "-".join(trend_a) if trend_a else "N.D."
 
+    # Rendimento specifico Casa per Home e Trasferta per Away
+    rec_h_home = [x for x in hist_h if x[2]][-5:] if hist_h else []
+    rec_a_away = [x for x in hist_a if not x[2]][-5:] if hist_a else []
+
+    vh_h = sum(1 for x in rec_h_home if x[3] == 'V')
+    ph_h = sum(1 for x in rec_h_home if x[3] == 'P')
+    sh_h = sum(1 for x in rec_h_home if x[3] == 'S')
+    pts_h_home = vh_h * 3 + ph_h
+
+    va_a = sum(1 for x in rec_a_away if x[3] == 'V')
+    pa_a = sum(1 for x in rec_a_away if x[3] == 'P')
+    sa_a = sum(1 for x in rec_a_away if x[3] == 'S')
+    pts_a_away = va_a * 3 + pa_a
+
+    # Gol fatti e subiti nelle ultime gare
+    gf_h = sum(x[4] for x in rec_h)
+    gs_h = sum(x[5] for x in rec_h)
+    gf_a = sum(x[4] for x in rec_a)
+    gs_a = sum(x[5] for x in rec_a)
+
+    # Scontri Diretti H2H
     h2h_matches = []
     if hist_h:
         for m in hist_h:
@@ -190,17 +212,17 @@ def calcola_forma_calcio(home, away):
         sh = sum(1 for m in rh if m[3] == 'S')
         h2h_str = f"H2H {len(rh)} match: {vh}V {home}, {ph}N, {sh}V {away}"
 
-    summary = f"Forma: {home} ({str_h}, {pts_h}pt) • {away} ({str_a}, {pts_a}pt)"
+    summary = f"Forma Ultime 5: {home} ({str_h}, {pts_h}pt | Casa: {vh_h}V-{ph_h}N-{sh_h}P) • {away} ({str_a}, {pts_a}pt | Trasf: {va_a}V-{pa_a}N-{sa_a}P)"
     if h2h_str:
         summary += f" • {h2h_str}"
 
     return {
-        "trend_h": str_h, "pts_h": pts_h,
-        "trend_a": str_a, "pts_a": pts_a,
+        "trend_h": str_h, "pts_h": pts_h, "pts_h_home": pts_h_home,
+        "trend_a": str_a, "pts_a": pts_a, "pts_a_away": pts_a_away,
+        "gf_h": gf_h, "gs_h": gs_h, "gf_a": gf_a, "gs_a": gs_a,
         "summary": summary, "has_data": bool(rec_h or rec_a),
         "h2h_str": h2h_str
     }
-
 def calcola_forma_tennis(p1, p2):
     n1 = norm_name(p1)
     n2 = norm_name(p2)
@@ -290,18 +312,39 @@ def analizza_calcio(rows, q1, qx, q2, ruolo="Tutti", home="", away=""):
     dog_double = 'X2' if fav_segno == '1' else '1X'
     dog_double_pct = (pct_x + pct_2) if fav_segno == '1' else (pct_1 + pct_x)
 
-    # Analisi Forma Recente
+    # Collaborazione Quote Storiche + Statistiche Recenti (Ultime 5 partite, Casa/Trasferta, H2H)
     forma = calcola_forma_calcio(home, away) if (home and away) else None
     forma_reinforce = ""
+    trappola_forma = False
+
     if forma and forma.get("has_data"):
         pts_h = forma.get("pts_h", 0)
         pts_a = forma.get("pts_a", 0)
-        if fav_segno == '1' and pts_h >= 9 and pts_a <= 6:
-            forma_reinforce = f" (Rafforzato da Forma: {home} a {pts_h}pt vs {away} a {pts_a}pt)"
-        elif fav_segno == '2' and pts_a >= 9 and pts_h <= 6:
-            forma_reinforce = f" (Rafforzato da Forma: {away} a {pts_a}pt vs {home} a {pts_h}pt)"
+        pts_h_home = forma.get("pts_h_home", 0)
+        pts_a_away = forma.get("pts_a_away", 0)
 
-    if fav_pct >= 62.0:
+        # 1. Rinforzo positivo quando quote e forma concordano
+        if fav_segno == '1' and (pts_h >= 9 or pts_h_home >= 9) and (pts_a <= 6 or pts_a_away <= 4):
+            forma_reinforce = f" (Rafforzato da Forma & Rendimento Casa: {home} {pts_h}pt vs {away} {pts_a}pt)"
+        elif fav_segno == '2' and (pts_a >= 9 or pts_a_away >= 9) and (pts_h <= 6 or pts_h_home <= 4):
+            forma_reinforce = f" (Rafforzato da Forma & Rendimento Trasferta: {away} {pts_a}pt vs {home} {pts_h}pt)"
+
+        # 2. Allarme Trappola: Quota favorevole ma forma recente opposta!
+        if fav_segno == '1' and pts_h <= 3 and pts_a >= 9:
+            trappola_forma = True
+        elif fav_segno == '2' and pts_a <= 3 and pts_h >= 9:
+            trappola_forma = True
+
+    if trappola_forma:
+        verdetto = f"DOPPIA CHANCE {dog_double} (Allarme Trappola: Quota Favorito in forte contrasto con Crisi Recente)"
+        motivo = f"Attenzione: la quota indica favorito {home if fav_segno=='1' else away}, ma la forma recente e il rendimento casa/trasferta mostrano trend opposto. Copertura prudenziale {dog_double} raccomandata."
+        if forma and forma.get("has_data"):
+            motivo += f" {forma['summary']}."
+        pick = dog_double
+        pick_pct = max(dog_double_pct, 55.0)
+        tipo = "doppia"
+        livello = "warn"
+    elif fav_pct >= 62.0:
         verdetto = f"SEGNO {fav_segno}{forma_reinforce} (Vittoria Favorita confermata dai dati)"
         motivo = f"Il favorito storico converte nel {fav_pct:.1f}% dei casi su {tot} partite."
         if forma and forma.get("has_data"):
@@ -347,7 +390,6 @@ def analizza_calcio(rows, q1, qx, q2, ruolo="Tutti", home="", away=""):
                 verdetto=verdetto, motivo=motivo, forma_summary=forma['summary'] if forma else '',
                 pick=pick, pick_pct=pick_pct, tipo=tipo, livello=livello,
                 ultimi=campione[-5:])
-
 def analizza_tennis(rows, q1, q2, superficie="Tutte", formato="Tutti i formati", p1="", p2=""):
     if not rows or any(x is None or x <= 1.0 for x in (q1, q2)):
         return None
