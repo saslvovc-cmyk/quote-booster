@@ -616,46 +616,85 @@ def analizza_tennis(rows, q1, q2, superficie="Tutte", formato="Tutti i formati",
     max_fail = max(fail_streaks) if fail_streaks else 0
     avg_fail = (sum(fail_streaks) / len(fail_streaks)) if fail_streaks else 0
 
-    # Calcolo frequenza reale match finiti al 3° set
+    # Frequenza reale con cui il database storico delle quote ha prodotto il 3° set
     cnt_3set = sum(1 for r in campione if len(r) > 9 and r[9] > 0 and (r[8] + r[9]) >= 3)
-    pct_3set = round((cnt_3set / tot * 100), 1) if tot > 0 else 40.0
-    over_set_quota = round(max(1.80, min(2.50, 100.0 / max(pct_3set, 35.0))), 2)
+    pct_3set = round((cnt_3set / tot * 100), 1) if tot > 0 else 35.0
+    over_set_quota = round(max(1.75, min(2.50, 100.0 / max(pct_3set, 35.0))), 2)
 
+    # Reperimento forma recente ufficiale e H2H
     forma = calcola_forma_tennis(p1, p2, mid=mid) if (p1 and p2) else None
-    has_recent_3set = forma and (forma.get("three_1", 0) >= 2 or forma.get("three_2", 0) >= 2)
+    w1 = forma.get("w1", 0) if forma else 0
+    tot1 = forma.get("tot1", 0) if forma else 0
+    w2 = forma.get("w2", 0) if forma else 0
+    tot2 = forma.get("tot2", 0) if forma else 0
+    ts1 = forma.get("three_1", 0) if forma else 0
+    ts2 = forma.get("three_2", 0) if forma else 0
 
-    # Identificazione match equilibrato
-    is_equilibrato = (pct_fav < 65.0 and abs(q1 - q2) <= 1.05) or (pct_3set >= 36.0 and pct_fav < 68.0) or has_recent_3set
+    w_fav = w1 if fav_idx == "G1" else w2
+    tot_fav = tot1 if fav_idx == "G1" else tot2
+    w_und = w2 if fav_idx == "G1" else w1
+    tot_und = tot2 if fav_idx == "G1" else tot1
 
-    if pct_fav >= 66.0 and not is_equilibrato:
-        verdetto = f"VITTORIA SEGNO {fav_idx} (Favorito Solido nel contesto)"
-        alert = f"Tenuta alta: la quota bassa trova conferma nel {pct_fav:.1f}% dei precedenti storici."
+    fav_name = p1 if fav_idx == "G1" else p2
+    und_name = p2 if fav_idx == "G1" else p1
+
+    # 1. VALUTAZIONE QUOTE: Il match è genuinamente equilibrato?
+    diff_quote = abs(q1 - q2)
+    is_quote_equilibrato = (diff_quote <= 0.45) and (q_fav >= 1.60)
+
+    # 2. VALUTAZIONE DATABASE: La quota nel DB ha realmente prodotto il 3° set?
+    db_ha_prodotto_3set = (pct_3set >= 41.5)
+
+    # 3. VALUTAZIONE FORMA: Entrambi i tennisti lottano e vanno al 3° set
+    forma_tendenza_3set = (ts1 + ts2) >= 3
+
+    # Allarme Trappola sul favorito nominale
+    trappola_favorito = (pct_und >= 42.0 and diff_fav <= -4.0) or (w_fav <= 1 and w_und >= 4 and tot_fav >= 4)
+
+    # =========================================================================
+    # DECISIONE: PRONOSTICO SECCO (G1 / G2) oppure TERZO SET (OVER 2.5 SET)
+    # =========================================================================
+    if trappola_favorito:
+        verdetto = f"SORPRESA SEGNO {und_idx} (Allarme Trappola: Sfavorito Competitivo nei Dati)"
+        alert = f"Attenzione: quota {q_fav:.2f} ingannevole nel DB. Lo sfavorito {und_name} converte nel {pct_und:.1f}% dei precedenti storici con trend recente favorevole."
+        if forma and forma.get("has_data"): alert += f" • {forma['summary']}."
+        pick = und_idx
+        pick_pct = max(pct_und, 45.0)
+        livello = "warn"
+
+    elif is_quote_equilibrato and (db_ha_prodotto_3set or forma_tendenza_3set):
+        verdetto = "OVER 2.5 SET / DECISIONE AL 3° SET (Match Equilibrato da Quote DB & Forma)"
+        alert = f"Incontro molto equilibrato ({q1:.2f} vs {q2:.2f}): il pattern quote nel DB produce il 3° set nel {pct_3set:.1f}% dei casi. Pronostico ideale indipendentemente da chi vincerà!"
+        if forma and forma.get("has_data"): alert += f" • {forma['summary']}."
+        pick = "OVER 2.5 SET"
+        pick_pct = max(pct_3set, 48.0)
+        livello = "ok"
+
+    elif pct_fav >= 58.0 or q_fav <= 1.65:
+        forma_reinforce = ""
+        if w_fav >= 4 and tot_fav >= 4:
+            forma_reinforce = f" (Rafforzato da Forma Recente: {fav_name} {w_fav}/{tot_fav} V)"
+        verdetto = f"VITTORIA SEGNO {fav_idx}{forma_reinforce} (Pronostico Secco Favorito confermato dal DB)"
+        alert = f"Tenuta solida: il favorito converte nel {pct_fav:.1f}% dei precedenti storici su {tot} match nel DB (attesa {prob_imp_fav:.1f}%)."
         if forma and forma.get("has_data"): alert += f" • {forma['summary']}."
         pick = fav_idx
         pick_pct = pct_fav
         livello = "ok"
-    elif is_equilibrato:
-        # Match equilibrato: pronostico su incontro al 3° set indipendentemente da chi vince
-        verdetto = "OVER 2.5 SET / DECISIONE AL 3° SET (Match Equilibrato)"
-        alert = f"Incontro molto equilibrato ({pct_fav:.1f}% vs {pct_und:.1f}%): storicamente il {pct_3set:.1f}% degli incontri finisce al 3° set. Pronostico ideale indipendentemente da chi vincerà!"
-        if forma and forma.get("has_data"): alert += f" • {forma['summary']}."
-        pick = "OVER 2.5 SET"
-        pick_pct = max(pct_3set, 50.0)
-        livello = "ok" if pct_3set >= 36.0 else "warn"
-    elif pct_und >= 45.0 or diff_fav <= -5.0:
-        verdetto = f"SORPRESA / OVER SET: SEGNO {und_idx} COMPETITIVO (Allarme Trappola)"
-        alert = f"ATTENZIONE: Lo sfavorito vince nel {pct_und:.1f}% dei casi. Quota {q_fav:.2f} ingannevole su questa superficie!"
-        if forma and forma.get("has_data"): alert += f" • {forma['summary']}."
-        pick = und_idx
-        pick_pct = pct_und
-        livello = "bad"
+
     else:
-        verdetto = "OVER 2.5 SET / VOLATILITÀ ELEVATA (Match Aperto)"
-        alert = f"Il favorito vince solo al {pct_fav:.1f}%. Frequenza 3° set al {pct_3set:.1f}%."
+        pick_idx = fav_idx
+        if tot1 >= 3 and tot2 >= 3:
+            if (w2 / tot2) > (w1 / tot1) + 0.25 and fav_idx == "G1":
+                pick_idx = "G2"
+            elif (w1 / tot1) > (w2 / tot2) + 0.25 and fav_idx == "G2":
+                pick_idx = "G1"
+
+        verdetto = f"VITTORIA SEGNO {pick_idx} (Pronostico Secco nel Contesto)"
+        alert = f"Valutazione secca: favorito al {pct_fav:.1f}%, frequenza 3° set al {pct_3set:.1f}% non sufficiente per l'Over."
         if forma and forma.get("has_data"): alert += f" • {forma['summary']}."
-        pick = "OVER 2.5 SET" if pct_3set >= 32.0 else fav_idx
-        pick_pct = max(pct_3set, pct_fav)
-        livello = "warn"
+        pick = pick_idx
+        pick_pct = pct_fav if pick_idx == fav_idx else pct_und
+        livello = "dim"
 
     return dict(n=tot, tolf=tolf, tolu=tolu,
                 cnt_fav=cnt_fav, cnt_und=cnt_und,
