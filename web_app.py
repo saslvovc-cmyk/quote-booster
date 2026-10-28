@@ -512,79 +512,180 @@ def report_tennis(r, q):
 # =====================================================================
 #  CLIENT FLASHSCORE
 # =====================================================================
+# Paesi Europei (in italiano e inglese per matchare qualsiasi feed Flashscore)
+EUROPE_COUNTRIES = {
+    'ALBANIA', 'ANDORRA', 'ARMENIA', 'AUSTRIA', 'AZERBAIJAN', 'AZERBAIGIAN', 
+    'BELGIUM', 'BELGIO', 'BELARUS', 'BIELORUSSIA', 'BOSNIA AND HERZEGOVINA', 
+    'BOSNIA & HERZEGOVINA', 'BOSNIA ED ERZEGOVINA', 'BOSNIA', 'BULGARIA', 
+    'CROATIA', 'CROAZIA', 'CYPRUS', 'CIPRO', 'CZECH REPUBLIC', 'CECHIA', 'REPUBBLICA CECA', 
+    'DENMARK', 'DANIMARCA', 'ENGLAND', 'INGHILTERRA', 'ESTONIA', 'EUROPE', 'EUROPA', 
+    'FAROE ISLANDS', 'ISOLE FAROE', 'FINLAND', 'FINLANDIA', 'FRANCE', 'FRANCIA', 
+    'GEORGIA', 'GERMANY', 'GERMANIA', 'GIBRALTAR', 'GIBILTERRA', 'GREECE', 'GRECIA', 
+    'HUNGARY', 'UNGHERIA', 'ICELAND', 'ISLANDA', 'IRELAND', 'IRLANDA', 'NORTHERN IRELAND', 'IRLANDA DEL NORD', 
+    'ISRAEL', 'ISRAELE', 'ITALY', 'ITALIA', 'KAZAKHSTAN', 'KAZAKISTAN', 'KOSOVO', 
+    'LATVIA', 'LETTONIA', 'LIECHTENSTEIN', 'LITHUANIA', 'LITUANIA', 'LUXEMBOURG', 'LUSSEMBURGO', 
+    'MALTA', 'MOLDOVA', 'MOLDAVIA', 'MONTENEGRO', 'NETHERLANDS', 'OLANDA', 'PAESI BASSI', 
+    'NORTH MACEDONIA', 'MACEDONIA', 'MACEDONIA DEL NORD', 'NORWAY', 'NORVEGIA', 
+    'POLAND', 'POLONIA', 'PORTUGAL', 'PORTOGALLO', 'ROMANIA', 'RUSSIA', 'SAN MARINO', 
+    'SCOTLAND', 'SCOZIA', 'SERBIA', 'SLOVAKIA', 'SLOVACCHIA', 'SLOVENIA', 
+    'SPAIN', 'SPAGNA', 'SWEDEN', 'SVEZIA', 'SWITZERLAND', 'SVIZZERA', 
+    'TURKEY', 'TURCHIA', 'UKRAINE', 'UCRAINA', 'WALES', 'GALLES'
+}
+
+# Parole chiave che indicano categorie da SCARTARE SEMPRE (3a divisione, 4a divisione, dilettanti, giovanili, amatori, riserve, donne)
+STRICT_DISCARD_KEYWORDS = [
+    # Categorie inferiori (3a, 4a, 5a divisione o dilettanti)
+    'SERIE C', 'SERIE D', 'ECCELLENZA', 'PROMOZIONE', 'LEGA PRO',
+    'LEAGUE ONE', 'LEAGUE TWO', 'NATIONAL LEAGUE', 'NORTHERN PREMIER', 'SOUTHERN PREMIER', 'ISTHMIAN',
+    'LOWLAND LEAGUE', 'HIGHLAND LEAGUE',
+    'PRIMERA RFEF', 'SEGUNDA RFEF', 'TERCERA RFEF', 'PRIMERA FEDERACION', 'SEGUNDA FEDERACION', 'TERCERA FEDERACION',
+    '3. LIGA', '3.LIGA', '4. LIGA', '4.LIGA', '5. LIGA', '5.LIGA',
+    'REGIONALLIGA', 'OBERLIGA', 'LANDESLIGA',
+    'NATIONAL 1', 'NATIONAL 2', 'NATIONAL 3', 'CHAMPIONNAT NATIONAL',
+    'SERIE C1', 'SERIE C2',
+    '3. DIVISION', '3.DIVISION', '4. DIVISION', '4.DIVISION', '5. DIVISION', '5.DIVISION',
+    'DIVISION 3', 'DIVISION 4', 'DIVISION 5',
+    'THIRD LEAGUE', 'FOURTH LEAGUE', 'FIFTH LEAGUE',
+    '3RD LEAGUE', '4TH LEAGUE', '5TH LEAGUE',
+    '3. DEILD', '4. DEILD', '5. DEILD',
+    'LIGA 3', 'LIGA 4', 'LIGA 5',
+    'TERCERA DIVISION', 'SEGUNDA B', '2. LIGA INTERREGIONAL', '1. LIGA CLASSIC', '1.LIGA CLASSIC', 'PROMOTION LEAGUE',
+    'TERZA DIVISIONE', 'QUARTA DIVISIONE', 'QUINTA DIVISIONE',
+    '3A DIVISIONE', '4A DIVISIONE', '5A DIVISIONE',
+    '3ª DIVISIONE', '4ª DIVISIONE', '5ª DIVISIONE',
+    'DIVISION 2',
+    # Giovanili / Riserve / Amatori / Femminile
+    'WOMEN', 'FEMMINILE', 'FEMENINA', 'FRAUEN', 'DAMES', 'WOMAN', 'FEMININ', 'FEMENIL',
+    'PRIMAVERA', 'UNDER', 'U17', 'U18', 'U19', 'U20', 'U21', 'U22', 'U23', 'SUB-20', 'SUB-19', 'SUB-17',
+    'RESERVES', 'RISERVE', 'RESERVE', 'AMATEUR', 'AMATORI', 'AMATEURE', 'REGIONAL',
+    'YOUTH', 'YOUTH LEAGUE', 'DEVELOPMENT', 'JUNIORES', 'BERRETTI', 'COLLEGE'
+]
+
 class FlashscorePalinsestoService:
     @staticmethod
-    def get_tournament_sort_key(sport_id, league_name, feed_idx):
-        lg = (league_name or '').upper().strip()
-        is_fb = (sport_id == 1 or sport_id == "Calcio")
-        if is_fb:
-            # Tier 1: Top Coppe Europee e 1a Divisione dei Top 5 Campionati Europei
-            if ('CHAMPIONS LEAGUE' in lg or 'UEFA CHAMPIONS' in lg) and 'WOMEN' not in lg: return (1, 1, feed_idx)
-            if ('EUROPA LEAGUE' in lg or 'UEFA EUROPA' in lg) and 'WOMEN' not in lg: return (1, 2, feed_idx)
-            if 'CONFERENCE LEAGUE' in lg and 'WOMEN' not in lg: return (1, 3, feed_idx)
-            if ('SERIE A' in lg) and ('ITALI' in lg or 'ITALY' in lg or lg == 'SERIE A') and 'WOMEN' not in lg and 'FEMMINILE' not in lg:
-                return (1, 4, feed_idx)
-            if ('PREMIER LEAGUE' in lg) and ('ENGLAND' in lg or 'INGHILTERRA' in lg) and 'CUP' not in lg and '2' not in lg and 'U21' not in lg and 'WOMEN' not in lg:
-                return (1, 5, feed_idx)
-            if ('LALIGA' in lg) and ('SPAIN' in lg or 'SPAGNA' in lg) and '2' not in lg and 'HYPERMOTION' not in lg and 'WOMEN' not in lg:
-                return (1, 6, feed_idx)
-            if ('BUNDESLIGA' in lg) and ('GERMANY' in lg or 'GERMANIA' in lg) and '2' not in lg and 'WOMEN' not in lg:
-                return (1, 7, feed_idx)
-            if ('LIGUE 1' in lg) and ('FRANCE' in lg or 'FRANCIA' in lg) and 'WOMEN' not in lg:
-                return (1, 8, feed_idx)
-            if ('COPPA ITALIA' in lg or 'SUPERCOPPA' in lg) and ('ITALI' in lg or 'ITALY' in lg):
-                return (1, 9, feed_idx)
-            if any(x in lg for x in ['FA CUP', 'COPA DEL REY', 'DFB POKAL', 'COUPE DE FRANCE']):
-                return (1, 10, feed_idx)
-            if ('EREDIVISIE' in lg) and ('NETHERLANDS' in lg or 'OLANDA' in lg) and 'WOMEN' not in lg:
-                return (1, 11, feed_idx)
-            if ('LIGA PORTUGAL' in lg or 'PRIMEIRA LIGA' in lg) and '2' not in lg and 'WOMEN' not in lg:
-                return (1, 12, feed_idx)
-            if 'NATIONS LEAGUE' in lg and 'WOMEN' not in lg:
-                return (1, 13, feed_idx)
-            if any(x in lg for x in ['EUROPEI', 'EURO QUAL', 'EURO CUP', 'MONDIALI', 'WORLD CUP']) and 'U21' not in lg and 'U20' not in lg and 'U17' not in lg and 'WOMEN' not in lg:
-                return (1, 14, feed_idx)
+    def check_and_rank_football_league(league_str, feed_idx):
+        """
+        Riconosce se un campionato e' di 1a o 2a divisione o coppa maggiore.
+        Se e' una serie minore (3a/4a div) o giovanile/dilettanti/donne -> RITORNA NONE (SCARTATO!).
+        Se e' valido -> RITORNA (tier, sub_order, feed_idx) con priorita' ASSOLUTA per l'Europa!
+        """
+        raw = (league_str or '').strip()
+        up = raw.upper()
 
-            # Tier 2: 2a Divisione Top Europee + 1a Divisione di tutti gli altri Campionati Europei
-            if ('SERIE B' in lg) and ('ITALI' in lg or 'ITALY' in lg or lg == 'SERIE B') and 'WOMEN' not in lg:
-                return (2, 1, feed_idx)
-            if 'CHAMPIONSHIP' in lg and ('ENGLAND' in lg or 'INGHILTERRA' in lg): return (2, 2, feed_idx)
-            if any(x in lg for x in ['LALIGA2', 'HYPERMOTION', 'SEGUNDA DIVISION']) and ('SPAIN' in lg or 'SPAGNA' in lg): return (2, 3, feed_idx)
-            if '2. BUNDESLIGA' in lg: return (2, 4, feed_idx)
-            if 'LIGUE 2' in lg: return (2, 5, feed_idx)
-            # Altri campionati Europei di 1a divisione
-            if any(x in lg for x in ['SUPER LIG', 'JUPILER', 'PREMIERSHIP', 'SUPER LEAGUE', 'EKSTRAKLASA', 'ELITESERIEN', 'ALLSVENSKAN', 'SUPERLIGA', '1. HNL', 'A LYGA', 'CYPRUS', 'AUSTRIA', 'SCOTLAND']):
-                return (2, 10, feed_idx)
-            # Coppe di lega
-            if any(x in lg for x in ['EFL CUP', 'EFL TROPHY', 'TAÇA DE PORTUGAL', 'KNVB BEKER']):
-                return (2, 15, feed_idx)
+        for kw in STRICT_DISCARD_KEYWORDS:
+            if kw in up:
+                return None
 
-            # Tier 3: 2a Divisione di altri campionati europei + Serie C
-            if 'SERIE C' in lg: return (3, 1, feed_idx)
-            if any(x in lg for x in ['LIGA PORTUGAL 2', 'EERSTE DIVISIE', 'EFL LEAGUE ONE', 'EFL LEAGUE TWO', '3. LIGA', 'CHALLENGER PRO LEAGUE']):
-                return (3, 2, feed_idx)
-
-            # Tier 4: Campionati 1a e 2a Divisione Resto del Mondo (Sud America, Asia, USA)
-            if any(x in lg for x in ['LIBERTADORES', 'SUDAMERICANA', 'AFC CHAMPIONS LEAGUE']): return (4, 1, feed_idx)
-            if ('SERIE A' in lg or 'COPA DO BRASIL' in lg or 'SERIE B' in lg) and ('BRAZIL' in lg or 'BRASILE' in lg): return (4, 2, feed_idx)
-            if 'LIGA PROFESIONAL' in lg or 'ARGENTINA' in lg: return (4, 3, feed_idx)
-            if 'MLS' in lg or 'MAJOR LEAGUE SOCCER' in lg: return (4, 4, feed_idx)
-            if 'SAUDI' in lg: return (4, 5, feed_idx)
-            if any(x in lg for x in ['J1 LEAGUE', 'K LEAGUE', 'LIGA MX']): return (4, 6, feed_idx)
-
-            # Tier 5: Resto dei campionati e tornei minori
-            return (5, feed_idx, feed_idx)
+        if ':' in raw:
+            country_part, comp_part = raw.split(':', 1)
+            country = country_part.strip().upper()
+            comp = comp_part.strip().upper()
         else:
-            # Tennis: Grand Slam, ATP/WTA Masters/Tour, Challenger, ITF (Solo Singolari)
-            if any(x in lg for x in ['AUSTRALIAN OPEN', 'ROLAND GARROS', 'OPEN DI FRANCIA', 'FRENCH OPEN', 'WIMBLEDON', 'US OPEN']):
+            country = 'EUROPE' if any(eu in up for eu in ['UEFA', 'CHAMPIONS LEAGUE', 'EUROPA LEAGUE', 'CONFERENCE']) else 'MONDO'
+            comp = up
+
+        is_europe = (country in EUROPE_COUNTRIES) or any(eu in country for eu in ['EUROPE', 'EUROPA', 'BOSNIA'])
+
+        # UEFA & Coppe Europee Maggiori (Solo se UEFA / Europe)
+        if is_europe or 'UEFA' in comp:
+            if 'CHAMPIONS LEAGUE' in comp or 'UEFA CHAMPIONS' in comp:
                 return (1, 1, feed_idx)
-            if 'ATP' in lg and ('1000' in lg or 'MASTERS' in lg): return (1, 2, feed_idx)
-            if 'WTA' in lg and ('1000' in lg): return (1, 3, feed_idx)
-            if 'ATP - SINGLES' in lg or 'ATP - SINGOLARE' in lg or ('ATP' in lg and 'DOUBLES' not in lg and 'DOPPIO' not in lg): return (1, 4, feed_idx)
-            if 'WTA - SINGLES' in lg or 'WTA - SINGOLARE' in lg or ('WTA' in lg and 'DOUBLES' not in lg and 'DOPPIO' not in lg): return (1, 5, feed_idx)
-            if 'CHALLENGER' in lg and ('DOUBLES' not in lg and 'DOPPIO' not in lg): return (2, 1, feed_idx)
-            if 'ITF' in lg and ('DOUBLES' not in lg and 'DOPPIO' not in lg): return (3, 1, feed_idx)
-            return (4, feed_idx, feed_idx)
+            if 'EUROPA LEAGUE' in comp or 'UEFA EUROPA' in comp:
+                return (1, 2, feed_idx)
+            if 'CONFERENCE LEAGUE' in comp:
+                return (1, 3, feed_idx)
+            if 'SUPER CUP' in comp:
+                return (1, 4, feed_idx)
+            if 'NATIONS LEAGUE' in comp:
+                return (1, 5, feed_idx)
+            if any(x in comp for x in ['EUROPEI', 'EURO QUAL', 'EURO CUP']):
+                return (1, 6, feed_idx)
+
+        # TOP 5 CAMPIONATI EUROPEI - 1A DIVISIONE
+        if country in ['ITALIA', 'ITALY'] and ('SERIE A' in comp or comp == 'SERIE A'):
+            return (1, 10, feed_idx)
+        if country in ['INGHILTERRA', 'ENGLAND'] and ('PREMIER LEAGUE' in comp) and '2' not in comp:
+            return (1, 11, feed_idx)
+        if country in ['SPAGNA', 'SPAIN'] and ('LALIGA' in comp or 'PRIMERA DIVISION' in comp) and '2' not in comp and 'HYPERMOTION' not in comp:
+            return (1, 12, feed_idx)
+        if country in ['GERMANIA', 'GERMANY'] and ('BUNDESLIGA' in comp) and '2' not in comp:
+            return (1, 13, feed_idx)
+        if country in ['FRANCIA', 'FRANCE'] and ('LIGUE 1' in comp):
+            return (1, 14, feed_idx)
+
+        # TOP 5 CAMPIONATI EUROPEI - 2A DIVISIONE
+        if country in ['ITALIA', 'ITALY'] and ('SERIE B' in comp or comp == 'SERIE B'):
+            return (2, 1, feed_idx)
+        if country in ['INGHILTERRA', 'ENGLAND'] and ('CHAMPIONSHIP' in comp):
+            return (2, 2, feed_idx)
+        if country in ['SPAGNA', 'SPAIN'] and any(x in comp for x in ['LALIGA2', 'HYPERMOTION', 'SEGUNDA DIVISION']):
+            return (2, 3, feed_idx)
+        if country in ['GERMANIA', 'GERMANY'] and ('2. BUNDESLIGA' in comp or '2.BUNDESLIGA' in comp):
+            return (2, 4, feed_idx)
+        if country in ['FRANCIA', 'FRANCE'] and ('LIGUE 2' in comp):
+            return (2, 5, feed_idx)
+
+        # Identificazione generica Prima e Seconda Divisione
+        is_first_div = any(x in comp for x in [
+            '1.', '1ST', 'TIER 1', 'FIRST', 'PREMIER', 'SUPER LIG', 'SUPER LEAGUE', 'SUPERLIGA', 
+            'EREDIVISIE', 'PRIMEIRA LIGA', 'LIGA PORTUGAL', 'JUPILER', 'EKSTRAKLASA', 'ELITESERIEN', 
+            'ALLSVENSKAN', 'A LYGA', 'HNL', 'LIGA 1', 'DIVISION 1', 'DIVISION OF HONOUR', 
+            'TOP DIVISION', 'PROFESSIONAL LEAGUE', 'PRO LEAGUE', 'LIGA PROFESIONAL', 'SERIE A',
+            'VEIKKAUSLIIGA', 'BESTA DEILD', 'MEISTRILIIGA', 'VIRSLIGA', 'SUPERIORE', 'NATIONALDIVISIOUN',
+            'PREMIERSHIP', 'PREMIER DIVISION', 'PREMIJER LIGA', 'PRVA LIGA', 'PRIMERA A', 'LIGA MX'
+        ])
+        
+        is_second_div = any(x in comp for x in [
+            '2.', '2ND', 'TIER 2', 'SECOND', 'CHAMPIONSHIP', 'EERSTE DIVISIE', 'LIGA PORTUGAL 2',
+            'CHALLENGER PRO', '1. LIG', '1. DIVISION', '1.DIVISION', 'SUPERETTAN', 'OBOS-LIGAEN',
+            '2. LIGA', '2.LIGA', 'VTORA LIGA', 'SEGUNDA', 'SERIE B', 'PRIMERA NACIONAL', 'PRIMERA B',
+            'USL CHAMPIONSHIP', 'J2 LEAGUE', 'K LEAGUE 2', 'LIGA 2', 'YKKONEN', 'YKKOSLIIGA',
+            'KATEGORIA E PARE'
+        ])
+
+        is_cup = any(x in comp for x in ['COPPA', 'CUP', 'POKAL', 'BEKER', 'TAÇA', 'TACA', 'COUPE', 'COPA', 'SUPERCOPPA', 'SUPER CUP'])
+
+        if is_europe:
+            if is_first_div:
+                return (3, feed_idx, feed_idx)
+            if is_second_div:
+                return (4, feed_idx, feed_idx)
+            if is_cup:
+                return (5, feed_idx, feed_idx)
+            if any(w in comp for w in ['DIVISIO', 'LIGA', 'LEAGUE']):
+                return (3, feed_idx, feed_idx)
+            return None
+
+        else:
+            if any(x in comp for x in ['LIBERTADORES', 'SUDAMERICANA', 'CONCACAF', 'AFC CHAMPIONS', 'CAF CHAMPIONS', 'CHAMPIONS LEAGUE']):
+                return (6, 1, feed_idx)
+            if is_first_div or any(x in comp for x in ['MLS', 'MAJOR LEAGUE SOCCER', 'LIGA MX', 'SAUDI', 'J1 LEAGUE', 'K LEAGUE 1', 'LIGA PROFESIONAL']):
+                return (6, 10, feed_idx)
+            if is_second_div:
+                return (7, feed_idx, feed_idx)
+            if is_cup:
+                return (8, feed_idx, feed_idx)
+            return None
+
+    @staticmethod
+    def get_tennis_sort_key(league_name, feed_idx):
+        lg = (league_name or '').upper().strip()
+        if any(x in lg for x in ['AUSTRALIAN OPEN', 'ROLAND GARROS', 'OPEN DI FRANCIA', 'FRENCH OPEN', 'WIMBLEDON', 'US OPEN']):
+            return (1, 1, feed_idx)
+        if 'ATP' in lg and ('1000' in lg or 'MASTERS' in lg): return (1, 2, feed_idx)
+        if 'WTA' in lg and ('1000' in lg): return (1, 3, feed_idx)
+        if 'ATP - SINGLES' in lg or 'ATP - SINGOLARE' in lg or 'ATP' in lg: return (1, 4, feed_idx)
+        if 'WTA - SINGLES' in lg or 'WTA - SINGOLARE' in lg or 'WTA' in lg: return (1, 5, feed_idx)
+        if 'CHALLENGER' in lg: return (2, 1, feed_idx)
+        if 'ITF' in lg: return (3, 1, feed_idx)
+        return (4, feed_idx, feed_idx)
+
+    @staticmethod
+    def get_tournament_sort_key(sport_id, league_name, feed_idx):
+        if sport_id == 1 or sport_id == "Calcio":
+            return FlashscorePalinsestoService.check_and_rank_football_league(league_name, feed_idx)
+        else:
+            return FlashscorePalinsestoService.get_tennis_sort_key(league_name, feed_idx)
 
     @staticmethod
     def fetch_all_today(sport_id=1, day_offset=0):
@@ -622,6 +723,7 @@ class FlashscorePalinsestoService:
             if r_sched.status_code == 200:
                 curr_league = "Generale"
                 curr_league_idx = 0
+                curr_league_valid = True
                 curr_sort_key = (5, 9999, 9999)
                 match_counter = 0
                 for row in r_sched.text.split("~"):
@@ -632,16 +734,28 @@ class FlashscorePalinsestoService:
                     if "ZA" in f:
                         curr_league = f["ZA"]
                         curr_league_idx += 1
-                        curr_sort_key = FlashscorePalinsestoService.get_tournament_sort_key(sport_id, curr_league, curr_league_idx)
+                        if sport_id == 1 or sport_id == "Calcio":
+                            rank = FlashscorePalinsestoService.check_and_rank_football_league(curr_league, curr_league_idx)
+                            if rank is None:
+                                curr_league_valid = False
+                            else:
+                                curr_league_valid = True
+                                curr_sort_key = rank
+                        else:
+                            up_lg = curr_league.upper()
+                            if any(d_kw in up_lg for d_kw in ['DOUBLE', 'DOPPI', 'MIXED', 'MISTO']):
+                                curr_league_valid = False
+                            else:
+                                curr_league_valid = True
+                                curr_sort_key = FlashscorePalinsestoService.get_tennis_sort_key(curr_league, curr_league_idx)
                     elif "AA" in f:
+                        if not curr_league_valid:
+                            continue
                         home = f.get("AE", "Casa").strip()
                         away = f.get("AF", "Ospite").strip()
 
                         # FILTRO TENNIS: SCARTA I DOPPI (SOLO SINGOLARI)
-                        if sport_id == 2:
-                            up_lg = curr_league.upper()
-                            if any(d_kw in up_lg for d_kw in ['DOUBLE', 'DOPPI', 'MIXED', 'MISTO']):
-                                continue
+                        if sport_id == 2 or sport_id == "Tennis":
                             if '/' in home or '/' in away:
                                 continue
 
@@ -680,7 +794,6 @@ class FlashscorePalinsestoService:
                 matches.sort(key=lambda m: (m.get("league_sort_key", (99, 9999, 9999)), m.get("feed_order", 0)))
         except Exception: pass
         return matches
-
 # =====================================================================
 #  APP FLASK & STATO CONDIVISO
 # =====================================================================
@@ -919,18 +1032,21 @@ def get_palinsesto(force=False):
             sk = m.get("league_sort_key", (5, 9999, 9999))
             return sk[0] if isinstance(sk, (tuple, list)) else 5
 
-        # Ripartizione per Tier:
-        # Tier 1: Top Coppe Europee e 1a Divisione Top 5 Europei + Grand Slam / ATP / WTA Masters
-        # Tier 2: 2a Divisione Top Europei (Serie B, Championship, LaLiga2, 2.Bundesliga, Ligue 2) + altre 1e Div Europee + Challenger
-        # Tier 3: 2e Div minori europee + Serie C + ITF
-        # Tier 4: Campionati 1a/2a Div Resto del Mondo
-        # Tier 5: Minori
-        all_sorted = []
-        for t in [1, 2, 3, 4, 5]:
-            all_sorted.extend([m for m in fb if tier(m) == t])
-            all_sorted.extend([m for m in tn if tier(m) == t])
+        # Ordinamento Palinsesto:
+        # 1. Calcio Europeo (Tiers 1, 2, 3, 4, 5) - SEMPRE E ASSOLUTAMENTE IN CIMA ALLA LISTA!
+        #    Tier 1: Top 5 Europei 1a Div (Serie A, Premier, LaLiga, Bundesliga, Ligue 1) + Coppe UEFA
+        #    Tier 2: Top 5 Europei 2a Div (Serie B, Championship, LaLiga2, 2. Bundesliga, Ligue 2)
+        #    Tier 3: Altri campionati Europei 1a Div (Eredivisie, Liga Portugal, Super Lig, ecc.)
+        #    Tier 4: Altri campionati Europei 2a Div (Eerste Divisie, ecc.)
+        #    Tier 5: Coppe Nazionali Europee
+        # 2. Tennis Singolari (Tiers 1, 2, 3, 4)
+        # 3. Calcio Resto del Mondo (Tiers 6, 7, 8) - IN SEGUITO
+        fb_europe = [m for m in fb if tier(m) <= 5]
+        fb_world = [m for m in fb if tier(m) > 5]
 
-        # Pre-calcola algoritmo sui primi 150 match con quote per visione immediata da smartphone!
+        all_sorted = fb_europe + tn + fb_world
+
+        # Pre-calcola algoritmo sui match con quote per visione immediata da smartphone!
         for m in all_sorted:
             if m.get("odds"):
                 elabora_algoritmo(m)
@@ -940,7 +1056,6 @@ def get_palinsesto(force=False):
     except Exception:
         pass
     return cached_palinsesto
-
 # Precarica
 load_saved_favorites()
 for m in favorites.values():
