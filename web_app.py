@@ -147,7 +147,184 @@ def carica_db(path):
     conn.close()
     return fb, tn
 
-def calcola_forma_calcio(home, away):
+_forma_live_cache = {}
+
+def get_forma_live(sport_id, mid, home="", away=""):
+    """
+    Recupera le ULTIME PARTITE DISPUTATE reali e ufficiali dal feed live H2H di Flashscore Ninja.
+    Fornisce trend V-P-S, punti forma, rendimento specifico casa/trasferta e storico H2H aggiornato a oggi.
+    """
+    if not mid:
+        return None
+    sp_id = 1 if (sport_id == 1 or sport_id == "Calcio") else 2
+    key = (sp_id, str(mid))
+    if key in _forma_live_cache:
+        return _forma_live_cache[key]
+
+    url = f"https://global.flashscore.ninja/5/x/feed/df_hh_{sp_id}_{mid}_it_1"
+    try:
+        r = requests.get(url, headers=FS_HEADERS, timeout=3.5)
+        if r.status_code == 200 and len(r.text) > 80:
+            sections = []
+            curr_title = ""
+            curr_items = []
+            
+            for row in r.text.split("~"):
+                f = {}
+                for part in row.split(SEP1):
+                    kv = part.split(SEP2)
+                    if len(kv) == 2:
+                        f[kv[0]] = kv[1]
+                if "KB" in f:
+                    if curr_items:
+                        sections.append((curr_title, curr_items))
+                    curr_title = f["KB"]
+                    curr_items = []
+                elif "KP" in f:
+                    score = f.get("KL", "")
+                    res_code = f.get("WIS", "") # w, d, l
+                    loc = f.get("KS", "") # home, away
+                    ku = int(f.get("KU", 0)) if f.get("KU", "").isdigit() else 0
+                    kt = int(f.get("KT", 0)) if f.get("KT", "").isdigit() else 0
+                    curr_items.append({
+                        "res": res_code,
+                        "score": score,
+                        "loc": loc,
+                        "ku": ku,
+                        "kt": kt,
+                        "opp_h": f.get("KJ", "").replace("*", "").strip(),
+                        "opp_a": f.get("KK", "").replace("*", "").strip(),
+                        "tourn": f.get("KF", "")
+                    })
+            if curr_items:
+                sections.append((curr_title, curr_items))
+                
+            if len(sections) >= 2:
+                matches_h = sections[0][1]
+                matches_a = sections[1][1]
+                matches_h2h = sections[2][1] if len(sections) >= 3 else []
+                
+                nh = norm_name(home)
+                na = norm_name(away)
+
+                if sp_id == 1:
+                    # Calcio: ultime 5 partite generali
+                    rec_h = matches_h[:5]
+                    rec_a = matches_a[:5]
+                    
+                    trend_h = [('V' if m['res'] == 'w' else ('P' if m['res'] == 'd' else 'S')) for m in rec_h]
+                    trend_a = [('V' if m['res'] == 'w' else ('P' if m['res'] == 'd' else 'S')) for m in rec_a]
+                    
+                    pts_h = sum(3 if x == 'V' else (1 if x == 'P' else 0) for x in trend_h)
+                    pts_a = sum(3 if x == 'V' else (1 if x == 'P' else 0) for x in trend_a)
+                    
+                    str_h = "-".join(trend_h) if trend_h else "N.D."
+                    str_a = "-".join(trend_a) if trend_a else "N.D."
+                    
+                    # Rendimento specifico: Home in Casa, Away Fuori casa
+                    home_in_casa = [m for m in matches_h if m['loc'] == 'home'][:5]
+                    away_in_trasf = [m for m in matches_a if m['loc'] == 'away'][:5]
+                    
+                    vh_c = sum(1 for m in home_in_casa if m['res'] == 'w')
+                    ph_c = sum(1 for m in home_in_casa if m['res'] == 'd')
+                    sh_c = sum(1 for m in home_in_casa if m['res'] == 'l')
+                    pts_h_home = vh_c * 3 + ph_c
+                    
+                    va_t = sum(1 for m in away_in_trasf if m['res'] == 'w')
+                    pa_t = sum(1 for m in away_in_trasf if m['res'] == 'd')
+                    sa_t = sum(1 for m in away_in_trasf if m['res'] == 'l')
+                    pts_a_away = va_t * 3 + pa_t
+                    
+                    # Scontri diretti H2H
+                    h2h_str = ""
+                    if matches_h2h:
+                        rec_h2h = matches_h2h[:5]
+                        vh = 0
+                        vd = 0
+                        va = 0
+                        for m in rec_h2h:
+                            n_kj = norm_name(m['opp_h'])
+                            if nh in n_kj or (len(n_kj) >= 4 and n_kj in nh):
+                                if m['ku'] > m['kt']: vh += 1
+                                elif m['ku'] == m['kt']: vd += 1
+                                else: va += 1
+                            else:
+                                if m['kt'] > m['ku']: vh += 1
+                                elif m['ku'] == m['kt']: vd += 1
+                                else: va += 1
+                        h2h_str = f"H2H {len(rec_h2h)} match: {vh}V {home}, {vd}N, {va}V {away}"
+                        
+                    summary = f"Forma Ultime 5: {home} ({str_h}, {pts_h}pt | Casa: {vh_c}V-{ph_c}N-{sh_c}P) • {away} ({str_a}, {pts_a}pt | Trasf: {va_t}V-{pa_t}N-{sa_t}P)"
+                    if h2h_str:
+                        summary += f" • {h2h_str}"
+                        
+                    res_dict = {
+                        "trend_h": str_h, "pts_h": pts_h, "pts_h_home": pts_h_home,
+                        "trend_a": str_a, "pts_a": pts_a, "pts_a_away": pts_a_away,
+                        "summary": summary, "has_data": True,
+                        "h2h_str": h2h_str, "live_flashscore": True
+                    }
+                    _forma_live_cache[key] = res_dict
+                    return res_dict
+                    
+                else:
+                    # Tennis
+                    rec_1 = matches_h[:6]
+                    rec_2 = matches_a[:6]
+                    
+                    trend_1 = [('V' if m['res'] == 'w' else 'S') for m in rec_1]
+                    trend_2 = [('V' if m['res'] == 'w' else 'S') for m in rec_2]
+                    
+                    w1 = sum(1 for x in trend_1 if x == 'V')
+                    w2 = sum(1 for x in trend_2 if x == 'V')
+                    
+                    # Frequenza 3° set nelle ultime partite
+                    ts1 = sum(1 for m in rec_1 if (m['ku'] + m['kt']) >= 3)
+                    ts2 = sum(1 for m in rec_2 if (m['ku'] + m['kt']) >= 3)
+                    
+                    str_1 = "-".join(trend_1) if trend_1 else "N.D."
+                    str_2 = "-".join(trend_2) if trend_2 else "N.D."
+                    
+                    # Scontri diretti H2H Tennis
+                    h2h_str = ""
+                    if matches_h2h:
+                        rec_h2h = matches_h2h[:5]
+                        vh = 0
+                        va = 0
+                        for m in rec_h2h:
+                            n_kj = norm_name(m['opp_h'])
+                            if nh in n_kj or (len(n_kj) >= 4 and n_kj in nh):
+                                if m['ku'] > m['kt']: vh += 1
+                                else: va += 1
+                            else:
+                                if m['kt'] > m['ku']: vh += 1
+                                else: va += 1
+                        h2h_str = f"H2H {len(rec_h2h)} match: {vh}V {home}, {va}V {away}"
+
+                    summary = f"Forma: {home} ({str_1}) • {away} ({str_2})"
+                    if (ts1 + ts2) > 0:
+                        summary += f" • {ts1 + ts2} match recenti al 3° set"
+                    if h2h_str:
+                        summary += f" • {h2h_str}"
+                        
+                    res_dict = {
+                        "trend_1": str_1, "w1": w1, "tot1": len(rec_1), "three_1": ts1,
+                        "trend_2": str_2, "w2": w2, "tot2": len(rec_2), "three_2": ts2,
+                        "summary": summary, "has_data": True, "live_flashscore": True,
+                        "h2h_str": h2h_str
+                    }
+                    _forma_live_cache[key] = res_dict
+                    return res_dict
+    except Exception:
+        pass
+        
+    return None
+
+def calcola_forma_calcio(home, away, mid=None):
+    if mid:
+        live = get_forma_live(1, mid, home, away)
+        if live and live.get("has_data"):
+            return live
     nh = norm_name(home)
     na = norm_name(away)
     hist_h = fb_team_history.get(nh)
@@ -223,7 +400,11 @@ def calcola_forma_calcio(home, away):
         "summary": summary, "has_data": bool(rec_h or rec_a),
         "h2h_str": h2h_str
     }
-def calcola_forma_tennis(p1, p2):
+def calcola_forma_tennis(p1, p2, mid=None):
+    if mid:
+        live = get_forma_live(2, mid, p1, p2)
+        if live and live.get("has_data"):
+            return live
     n1 = norm_name(p1)
     n2 = norm_name(p2)
     hist_1 = tn_player_history.get(n1)
@@ -264,7 +445,7 @@ def calcola_forma_tennis(p1, p2):
         "summary": summary, "has_data": bool(rec_1 or rec_2)
     }
 
-def analizza_calcio(rows, q1, qx, q2, ruolo="Tutti", home="", away=""):
+def analizza_calcio(rows, q1, qx, q2, ruolo="Tutti", home="", away="", mid=None):
     if not rows or any(x is None or x <= 1.0 for x in (q1, qx, q2)):
         return None
     tol1 = max(0.06, q1 * 0.05)
@@ -313,7 +494,7 @@ def analizza_calcio(rows, q1, qx, q2, ruolo="Tutti", home="", away=""):
     dog_double_pct = (pct_x + pct_2) if fav_segno == '1' else (pct_1 + pct_x)
 
     # Collaborazione Quote Storiche + Statistiche Recenti (Ultime 5 partite, Casa/Trasferta, H2H)
-    forma = calcola_forma_calcio(home, away) if (home and away) else None
+    forma = calcola_forma_calcio(home, away, mid=mid) if (home and away) else None
     forma_reinforce = ""
     trappola_forma = False
 
@@ -390,7 +571,7 @@ def analizza_calcio(rows, q1, qx, q2, ruolo="Tutti", home="", away=""):
                 verdetto=verdetto, motivo=motivo, forma_summary=forma['summary'] if forma else '',
                 pick=pick, pick_pct=pick_pct, tipo=tipo, livello=livello,
                 ultimi=campione[-5:])
-def analizza_tennis(rows, q1, q2, superficie="Tutte", formato="Tutti i formati", p1="", p2=""):
+def analizza_tennis(rows, q1, q2, superficie="Tutte", formato="Tutti i formati", p1="", p2="", mid=None):
     if not rows or any(x is None or x <= 1.0 for x in (q1, q2)):
         return None
     q_fav = min(q1, q2)
@@ -440,7 +621,7 @@ def analizza_tennis(rows, q1, q2, superficie="Tutte", formato="Tutti i formati",
     pct_3set = round((cnt_3set / tot * 100), 1) if tot > 0 else 40.0
     over_set_quota = round(max(1.80, min(2.50, 100.0 / max(pct_3set, 35.0))), 2)
 
-    forma = calcola_forma_tennis(p1, p2) if (p1 and p2) else None
+    forma = calcola_forma_tennis(p1, p2, mid=mid) if (p1 and p2) else None
     has_recent_3set = forma and (forma.get("three_1", 0) >= 2 or forma.get("three_2", 0) >= 2)
 
     # Identificazione match equilibrato
@@ -1029,8 +1210,9 @@ def elabora_algoritmo(m):
         m["esito_css"] = "pending"
         return
     sp = m.get("sport", "Calcio")
+    mid = m.get("id", "")
     if sp == "Calcio" and len(q) == 3:
-        res = analizza_calcio(fb_db, q[0], q[1], q[2], home=home, away=away)
+        res = analizza_calcio(fb_db, q[0], q[1], q[2], home=home, away=away, mid=mid)
         if res:
             livello, verdetto, summ, full = report_calcio(res, q)
             icon = "🎯" if livello == "ok" else ("⚠️" if livello == "warn" else "🚨")
@@ -1042,7 +1224,7 @@ def elabora_algoritmo(m):
             m["full_report"] = full
             m["forma_summary"] = res.get("forma_summary", "")
     elif sp == "Tennis" and len(q) >= 2:
-        res = analizza_tennis(tn_db, q[0], q[1], p1=home, p2=away)
+        res = analizza_tennis(tn_db, q[0], q[1], p1=home, p2=away, mid=mid)
         if res:
             livello, verdetto, summ, full = report_tennis(res, q)
             icon = "🎯" if livello == "ok" else ("⚠️" if livello == "warn" else "🚨")
@@ -1088,10 +1270,18 @@ def get_palinsesto(force=False):
 
         all_sorted = fb_europe + tn + fb_world
 
+        # Prefetch parallelo velocissimo di tutti i match con quote (H2H Flashscore Live)
+        with_odds = [m for m in all_sorted if m.get("odds") and m.get("id")]
+        from concurrent.futures import ThreadPoolExecutor
+        def _pre_fetch(m):
+            sp_id = 1 if m.get("sport") == "Calcio" else 2
+            get_forma_live(sp_id, m["id"], m.get("home", ""), m.get("away", ""))
+        with ThreadPoolExecutor(max_workers=20) as ex:
+            list(ex.map(_pre_fetch, with_odds))
+
         # Pre-calcola algoritmo sui match con quote per visione immediata da smartphone!
-        for m in all_sorted:
-            if m.get("odds"):
-                elabora_algoritmo(m)
+        for m in with_odds:
+            elabora_algoritmo(m)
 
         cached_palinsesto = all_sorted
         last_palinsesto_time = now
@@ -1115,10 +1305,15 @@ def add_header(response):
 
 @app.route("/")
 def index():
+    load_schedine_data()
+    for m in favorites.values():
+        if not m.get("pick_str"):
+            elabora_algoritmo(m)
     return render_mobile_html()
 
 @app.route("/api/data")
 def api_data():
+    load_schedine_data()
     fav_list = list(favorites.values())
     tot_quota = 1.0
     has_lost = False
@@ -1126,6 +1321,8 @@ def api_data():
     has_live = False
 
     for m in fav_list:
+        if not m.get("pick_str"):
+            elabora_algoritmo(m)
         tot_quota *= m.get("effective_quota", 1.0)
         # Aggiorna verifica esito live
         stato, testo, css_cls = verifica_esito(m)
