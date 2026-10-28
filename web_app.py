@@ -82,40 +82,167 @@ def _meta_trend(flags):
         out["l20"] = sum(flags[-20:]) / 20 * 100
     return out
 
+fb_team_history = {}
+tn_player_history = {}
+
+def norm_name(s):
+    if not s: return ""
+    return re.sub(r'[^a-zA-Z0-9]', '', str(s).lower())
+
 def carica_db(path):
+    global fb_team_history, tn_player_history
     if not os.path.exists(path):
         return [], []
     conn = sqlite3.connect(path)
     cur = conn.cursor()
     tabelle = {r[0] for r in cur.execute("SELECT name FROM sqlite_master WHERE type='table'")}
     fb, tn = [], []
+    fb_team_history = {}
+    tn_player_history = {}
 
     if "football_matches" in tabelle:
-        q = ("SELECT match_date, home_team, away_team, ftr, odds_b365_h, odds_b365_d, odds_b365_a "
+        q = ("SELECT match_date, home_team, away_team, ftr, odds_b365_h, odds_b365_d, odds_b365_a, fthg, ftag "
              "FROM football_matches WHERE ftr IN ('H','D','A') "
-             "AND odds_b365_h > 1 AND odds_b365_d > 1 AND odds_b365_a > 1 ORDER BY match_date")
-        for d, h, a, res, o1, ox, o2 in cur.execute(q):
+             "AND odds_b365_h > 1 AND odds_b365_d > 1 AND odds_b365_a > 1 ORDER BY match_date ASC")
+        for d, h, a, res, o1, ox, o2, hg, ag in cur.execute(q):
             try:
                 o1, ox, o2 = float(o1), float(ox), float(o2)
+                hg = float(hg or 0)
+                ag = float(ag or 0)
             except (ValueError, TypeError):
                 continue
             d = d or ""
-            fb.append((d, h, a, res, o1, ox, o2))
+            fb.append((d, h, a, res, o1, ox, o2, hg, ag))
+
+            nh = norm_name(h)
+            na = norm_name(a)
+            if nh not in fb_team_history: fb_team_history[nh] = []
+            if na not in fb_team_history: fb_team_history[na] = []
+            out_h = 'V' if res == 'H' else ('P' if res == 'D' else 'S')
+            out_a = 'V' if res == 'A' else ('P' if res == 'D' else 'S')
+            fb_team_history[nh].append((d, a, True, out_h, hg, ag))
+            fb_team_history[na].append((d, h, False, out_a, ag, hg))
 
     if "tennis_matches" in tabelle:
-        q = ("SELECT match_date, tournament, surface, winner, loser, odds_b365_w, odds_b365_l, best_of "
-             "FROM tennis_matches WHERE odds_b365_w > 1 AND odds_b365_l > 1 ORDER BY match_date")
-        for d, t, s, w, l, ow, ol, bo in cur.execute(q):
+        q = ("SELECT match_date, tournament, surface, winner, loser, odds_b365_w, odds_b365_l, best_of, wsets, lsets "
+             "FROM tennis_matches WHERE odds_b365_w > 1 AND odds_b365_l > 1 ORDER BY match_date ASC")
+        for d, t, s, w, l, ow, ol, bo, ws, ls in cur.execute(q):
             try:
                 ow, ol = float(ow), float(ol)
+                ws = float(ws or 0)
+                ls = float(ls or 0)
             except (ValueError, TypeError):
                 continue
             d = d or ""
-            tn.append((d, t, s, w, l, ow, ol, str(bo or '3')))
+            tn.append((d, t, s, w, l, ow, ol, str(bo or '3'), ws, ls))
+
+            nw = norm_name(w)
+            nl = norm_name(l)
+            if nw not in tn_player_history: tn_player_history[nw] = []
+            if nl not in tn_player_history: tn_player_history[nl] = []
+            is_3set = (ls > 0 and (ws + ls) >= 3)
+            tn_player_history[nw].append((d, l, True, is_3set))
+            tn_player_history[nl].append((d, w, False, is_3set))
+
     conn.close()
     return fb, tn
 
-def analizza_calcio(rows, q1, qx, q2, ruolo="Tutti"):
+def calcola_forma_calcio(home, away):
+    nh = norm_name(home)
+    na = norm_name(away)
+    hist_h = fb_team_history.get(nh)
+    if not hist_h:
+        for k, v in fb_team_history.items():
+            if (len(k) >= 4 and k in nh) or (len(nh) >= 4 and nh in k):
+                hist_h = v
+                break
+    hist_a = fb_team_history.get(na)
+    if not hist_a:
+        for k, v in fb_team_history.items():
+            if (len(k) >= 4 and k in na) or (len(na) >= 4 and na in k):
+                hist_a = v
+                break
+
+    rec_h = hist_h[-5:] if hist_h else []
+    rec_a = hist_a[-5:] if hist_a else []
+
+    trend_h = [x[3] for x in reversed(rec_h)]
+    trend_a = [x[3] for x in reversed(rec_a)]
+
+    pts_h = sum(3 if x=='V' else (1 if x=='P' else 0) for x in trend_h)
+    pts_a = sum(3 if x=='V' else (1 if x=='P' else 0) for x in trend_a)
+
+    str_h = "-".join(trend_h) if trend_h else "N.D."
+    str_a = "-".join(trend_a) if trend_a else "N.D."
+
+    h2h_matches = []
+    if hist_h:
+        for m in hist_h:
+            opp_n = norm_name(m[1])
+            if (len(na) >= 4 and na in opp_n) or (len(opp_n) >= 4 and opp_n in na):
+                h2h_matches.append(m)
+
+    h2h_str = ""
+    if h2h_matches:
+        rh = h2h_matches[-4:]
+        vh = sum(1 for m in rh if m[3] == 'V')
+        ph = sum(1 for m in rh if m[3] == 'P')
+        sh = sum(1 for m in rh if m[3] == 'S')
+        h2h_str = f"H2H {len(rh)} match: {vh}V {home}, {ph}N, {sh}V {away}"
+
+    summary = f"Forma: {home} ({str_h}, {pts_h}pt) • {away} ({str_a}, {pts_a}pt)"
+    if h2h_str:
+        summary += f" • {h2h_str}"
+
+    return {
+        "trend_h": str_h, "pts_h": pts_h,
+        "trend_a": str_a, "pts_a": pts_a,
+        "summary": summary, "has_data": bool(rec_h or rec_a),
+        "h2h_str": h2h_str
+    }
+
+def calcola_forma_tennis(p1, p2):
+    n1 = norm_name(p1)
+    n2 = norm_name(p2)
+    hist_1 = tn_player_history.get(n1)
+    if not hist_1:
+        for k, v in tn_player_history.items():
+            if (len(k) >= 4 and k in n1) or (len(n1) >= 4 and n1 in k):
+                hist_1 = v
+                break
+    hist_2 = tn_player_history.get(n2)
+    if not hist_2:
+        for k, v in tn_player_history.items():
+            if (len(k) >= 4 and k in n2) or (len(n2) >= 4 and n2 in k):
+                hist_2 = v
+                break
+
+    rec_1 = hist_1[-6:] if hist_1 else []
+    rec_2 = hist_2[-6:] if hist_2 else []
+
+    trend_1 = [('V' if x[2] else 'S') for x in reversed(rec_1)]
+    trend_2 = [('V' if x[2] else 'S') for x in reversed(rec_2)]
+
+    w1 = sum(1 for x in rec_1 if x[2])
+    w2 = sum(1 for x in rec_2 if x[2])
+
+    three_1 = sum(1 for x in rec_1 if x[3])
+    three_2 = sum(1 for x in rec_2 if x[3])
+
+    str_1 = "-".join(trend_1) if trend_1 else "N.D."
+    str_2 = "-".join(trend_2) if trend_2 else "N.D."
+
+    summary = f"Forma: {p1} ({str_1}) • {p2} ({str_2})"
+    if three_1 >= 2 or three_2 >= 2:
+        summary += f" • {three_1 + three_2} match recenti al 3° set"
+
+    return {
+        "trend_1": str_1, "w1": w1, "tot1": len(rec_1), "three_1": three_1,
+        "trend_2": str_2, "w2": w2, "tot2": len(rec_2), "three_2": three_2,
+        "summary": summary, "has_data": bool(rec_1 or rec_2)
+    }
+
+def analizza_calcio(rows, q1, qx, q2, ruolo="Tutti", home="", away=""):
     if not rows or any(x is None or x <= 1.0 for x in (q1, qx, q2)):
         return None
     tol1 = max(0.06, q1 * 0.05)
@@ -128,7 +255,6 @@ def analizza_calcio(rows, q1, qx, q2, ruolo="Tutti"):
 
     campione = []
     for r in rows:
-        # r = (match_date, home_team, away_team, ftr, odds_b365_h, odds_b365_d, odds_b365_a)
         if ruolo == "Casa Favorita" and r[4] > r[6]:
             continue
         if ruolo == "Ospite Favorita" and r[6] >= r[4]:
@@ -164,9 +290,22 @@ def analizza_calcio(rows, q1, qx, q2, ruolo="Tutti"):
     dog_double = 'X2' if fav_segno == '1' else '1X'
     dog_double_pct = (pct_x + pct_2) if fav_segno == '1' else (pct_1 + pct_x)
 
+    # Analisi Forma Recente
+    forma = calcola_forma_calcio(home, away) if (home and away) else None
+    forma_reinforce = ""
+    if forma and forma.get("has_data"):
+        pts_h = forma.get("pts_h", 0)
+        pts_a = forma.get("pts_a", 0)
+        if fav_segno == '1' and pts_h >= 9 and pts_a <= 6:
+            forma_reinforce = f" (Rafforzato da Forma: {home} a {pts_h}pt vs {away} a {pts_a}pt)"
+        elif fav_segno == '2' and pts_a >= 9 and pts_h <= 6:
+            forma_reinforce = f" (Rafforzato da Forma: {away} a {pts_a}pt vs {home} a {pts_h}pt)"
+
     if fav_pct >= 62.0:
-        verdetto = f"SEGNO {fav_segno} (Vittoria Favorita confermata dai dati)"
+        verdetto = f"SEGNO {fav_segno}{forma_reinforce} (Vittoria Favorita confermata dai dati)"
         motivo = f"Il favorito storico converte nel {fav_pct:.1f}% dei casi su {tot} partite."
+        if forma and forma.get("has_data"):
+            motivo += f" {forma['summary']}."
         pick = fav_segno
         pick_pct = fav_pct
         tipo = "singolo"
@@ -174,6 +313,8 @@ def analizza_calcio(rows, q1, qx, q2, ruolo="Tutti"):
     elif dog_double_pct >= 48.0 and diff_x > 2.0:
         verdetto = f"DOPPIA CHANCE {dog_double} (Trappola Favorito - Frequenza Pareggi/Rottura anomala)"
         motivo = f"La favorita nominale fallisce nel {dog_double_pct:.1f}% dei casi (Pareggio reale: {pct_x:.1f}%)."
+        if forma and forma.get("has_data"):
+            motivo += f" {forma['summary']}."
         pick = dog_double
         pick_pct = dog_double_pct
         tipo = "doppia"
@@ -181,6 +322,8 @@ def analizza_calcio(rows, q1, qx, q2, ruolo="Tutti"):
     elif pct_x >= 30.0:
         verdetto = "SEGNO X (Alta densità di pareggio nel pattern)"
         motivo = f"Il pareggio si manifesta al {pct_x:.1f}%, molto sopra la media standard."
+        if forma and forma.get("has_data"):
+            motivo += f" {forma['summary']}."
         pick = "X"
         pick_pct = pct_x
         tipo = "singolo"
@@ -188,6 +331,8 @@ def analizza_calcio(rows, q1, qx, q2, ruolo="Tutti"):
     else:
         verdetto = f"DOPPIA CHANCE {'1X' if q1 <= q2 else 'X2'} (Copertura prudenziale)"
         motivo = "Equilibrio statistico: convergenza non netta sul solo esito pieno."
+        if forma and forma.get("has_data"):
+            motivo += f" {forma['summary']}."
         pick = '1X' if q1 <= q2 else 'X2'
         pick_pct = dog_double_pct
         tipo = "doppia"
@@ -199,17 +344,17 @@ def analizza_calcio(rows, q1, qx, q2, ruolo="Tutti"):
                 impl={"1": prob_imp_1, "X": prob_imp_x, "2": prob_imp_2},
                 diff={"1": diff_1, "X": diff_x, "2": diff_2},
                 fav_segno=fav_segno, fav_pct=fav_pct, dog_double=dog_double, dog_double_pct=dog_double_pct,
-                verdetto=verdetto, motivo=motivo,
+                verdetto=verdetto, motivo=motivo, forma_summary=forma['summary'] if forma else '',
                 pick=pick, pick_pct=pick_pct, tipo=tipo, livello=livello,
                 ultimi=campione[-5:])
 
-def analizza_tennis(rows, q1, q2, superficie="Tutte", formato="Tutti i formati"):
+def analizza_tennis(rows, q1, q2, superficie="Tutte", formato="Tutti i formati", p1="", p2=""):
     if not rows or any(x is None or x <= 1.0 for x in (q1, q2)):
         return None
     q_fav = min(q1, q2)
     q_und = max(q1, q2)
-    fav_idx = "1" if q1 <= q2 else "2"
-    und_idx = "2" if q1 <= q2 else "1"
+    fav_idx = "G1" if q1 <= q2 else "G2"
+    und_idx = "G2" if q1 <= q2 else "G1"
 
     tolf = max(0.05, q_fav * 0.05)
     tolu = max(0.12, q_und * 0.06)
@@ -218,7 +363,6 @@ def analizza_tennis(rows, q1, q2, superficie="Tutte", formato="Tutti i formati")
 
     campione = []
     for r in rows:
-        # r = (match_date, tournament, surface, winner, loser, odds_b365_w, odds_b365_l, best_of)
         if superficie != "Tutte" and str(r[2]).lower() != superficie.lower():
             continue
         if formato == "3 Set (ATP/WTA)" and str(r[7]) != "3":
@@ -249,32 +393,55 @@ def analizza_tennis(rows, q1, q2, superficie="Tutte", formato="Tutti i formati")
     max_fail = max(fail_streaks) if fail_streaks else 0
     avg_fail = (sum(fail_streaks) / len(fail_streaks)) if fail_streaks else 0
 
-    if pct_fav >= 66.0:
+    # Calcolo frequenza reale match finiti al 3° set
+    cnt_3set = sum(1 for r in campione if len(r) > 9 and r[9] > 0 and (r[8] + r[9]) >= 3)
+    pct_3set = round((cnt_3set / tot * 100), 1) if tot > 0 else 40.0
+    over_set_quota = round(max(1.80, min(2.50, 100.0 / max(pct_3set, 35.0))), 2)
+
+    forma = calcola_forma_tennis(p1, p2) if (p1 and p2) else None
+    has_recent_3set = forma and (forma.get("three_1", 0) >= 2 or forma.get("three_2", 0) >= 2)
+
+    # Identificazione match equilibrato
+    is_equilibrato = (pct_fav < 65.0 and abs(q1 - q2) <= 1.05) or (pct_3set >= 36.0 and pct_fav < 68.0) or has_recent_3set
+
+    if pct_fav >= 66.0 and not is_equilibrato:
         verdetto = f"VITTORIA SEGNO {fav_idx} (Favorito Solido nel contesto)"
-        alert = "Tenuta alta: la quota bassa trova conferma nel campione analizzato."
+        alert = f"Tenuta alta: la quota bassa trova conferma nel {pct_fav:.1f}% dei precedenti storici."
+        if forma and forma.get("has_data"): alert += f" • {forma['summary']}."
         pick = fav_idx
         pick_pct = pct_fav
         livello = "ok"
+    elif is_equilibrato:
+        # Match equilibrato: pronostico su incontro al 3° set indipendentemente da chi vince
+        verdetto = "OVER 2.5 SET / DECISIONE AL 3° SET (Match Equilibrato)"
+        alert = f"Incontro molto equilibrato ({pct_fav:.1f}% vs {pct_und:.1f}%): storicamente il {pct_3set:.1f}% degli incontri finisce al 3° set. Pronostico ideale indipendentemente da chi vincerà!"
+        if forma and forma.get("has_data"): alert += f" • {forma['summary']}."
+        pick = "OVER 2.5 SET"
+        pick_pct = max(pct_3set, 50.0)
+        livello = "ok" if pct_3set >= 36.0 else "warn"
     elif pct_und >= 45.0 or diff_fav <= -5.0:
         verdetto = f"SORPRESA / OVER SET: SEGNO {und_idx} COMPETITIVO (Allarme Trappola)"
         alert = f"ATTENZIONE: Lo sfavorito vince nel {pct_und:.1f}% dei casi. Quota {q_fav:.2f} ingannevole su questa superficie!"
+        if forma and forma.get("has_data"): alert += f" • {forma['summary']}."
         pick = und_idx
         pick_pct = pct_und
         livello = "bad"
     else:
-        verdetto = "MATCH A ELEVATA VOLATILITÀ (Esito incerto / Monetina)"
-        alert = f"Il favorito vince solo al {pct_fav:.1f}%. Il margine statistico non giustifica una quota bassa."
-        pick = fav_idx
-        pick_pct = pct_fav
+        verdetto = "OVER 2.5 SET / VOLATILITÀ ELEVATA (Match Aperto)"
+        alert = f"Il favorito vince solo al {pct_fav:.1f}%. Frequenza 3° set al {pct_3set:.1f}%."
+        if forma and forma.get("has_data"): alert += f" • {forma['summary']}."
+        pick = "OVER 2.5 SET" if pct_3set >= 32.0 else fav_idx
+        pick_pct = max(pct_3set, pct_fav)
         livello = "warn"
 
     return dict(n=tot, tolf=tolf, tolu=tolu,
                 cnt_fav=cnt_fav, cnt_und=cnt_und,
                 pct_fav=pct_fav, pct_und=pct_und,
+                cnt_3set=cnt_3set, pct_3set=pct_3set, over_set_quota=over_set_quota,
                 prob_imp_fav=prob_imp_fav, diff_fav=diff_fav,
                 fav_idx=fav_idx, und_idx=und_idx,
                 max_fail=max_fail, avg_fail=avg_fail,
-                verdetto=verdetto, alert=alert,
+                verdetto=verdetto, alert=alert, forma_summary=forma['summary'] if forma else '',
                 pick=pick, pick_pct=pick_pct, livello=livello,
                 ultimi=campione[-5:])
 
@@ -287,6 +454,9 @@ def report_calcio(r, q):
         f"• 1: {r['freq']['1']:.1f}% | X: {r['freq']['X']:.1f}% | 2: {r['freq']['2']:.1f}%",
         f"• Rottura Favorito (X o Ribaltone): {r['dog_double_pct']:.1f}%",
     ]
+    if r.get("forma_summary"):
+        summary.append(f"• 📈 {r['forma_summary']}")
+
     full = [
         f"PRONOSTICO STATISTICO: {r['verdetto']}",
         f"Motivazione: {r['motivo']}",
@@ -311,17 +481,21 @@ def report_tennis(r, q):
     summary = [
         f"• {r['n']} precedenti reali analizzati",
         f"• {r['alert']}",
-        f"• Vittoria Favorito G{r['fav_idx']}: {r['pct_fav']:.1f}% (Attesa: {r['prob_imp_fav']:.1f}%)",
-        f"• Sorpresa Sfavorito G{r['und_idx']}: {r['pct_und']:.1f}%",
+        f"• Frequenza 3° Set nel pattern: {r.get('pct_3set', 40.0):.1f}%",
+        f"• Vittoria Favorito {r['fav_idx']}: {r['pct_fav']:.1f}% • Sorpresa {r['und_idx']}: {r['pct_und']:.1f}%",
     ]
+    if r.get("forma_summary"):
+        summary.append(f"• 📈 {r['forma_summary']}")
+
     full = [
         f"PRONOSTICO STATISTICO: {r['verdetto']}",
         f"Nota: {r['alert']}",
         f"Campione: {r['n']} match storici analizzati",
         "",
         "DATI REALI vs QUOTE:",
-        f"• Vittoria Favorito (G{r['fav_idx']}): {r['cnt_fav']} volte ({r['pct_fav']:.1f}%) [Attesa teorica: {r['prob_imp_fav']:.1f}%]",
-        f"• Ribaltone Underdog (G{r['und_idx']}): {r['cnt_und']} volte ({r['pct_und']:.1f}%)",
+        f"• Vittoria Favorito ({r['fav_idx']}): {r['cnt_fav']} volte ({r['pct_fav']:.1f}%) [Attesa teorica: {r['prob_imp_fav']:.1f}%]",
+        f"• Ribaltone Underdog ({r['und_idx']}): {r['cnt_und']} volte ({r['pct_und']:.1f}%)",
+        f"• Incontri terminati al 3° set: {r.get('cnt_3set', 0)} su {r['n']} ({r.get('pct_3set', 0.0):.1f}%)",
         "",
         "CICLO DI ROTTURA (QUANDO IL FAVORITO SALTA):",
         f"• Tasso effettivo di ribaltone: {r['pct_und']:.1f}%",
@@ -344,26 +518,23 @@ class FlashscorePalinsestoService:
         lg = (league_name or '').upper().strip()
         is_fb = (sport_id == 1 or sport_id == "Calcio")
         if is_fb:
-            # Tier 1: I Principali Campionati di Diretta.it / Flashscore
+            # Tier 1: Top Coppe Europee e 1a Divisione dei Top 5 Campionati Europei
+            if ('CHAMPIONS LEAGUE' in lg or 'UEFA CHAMPIONS' in lg) and 'WOMEN' not in lg: return (1, 1, feed_idx)
+            if ('EUROPA LEAGUE' in lg or 'UEFA EUROPA' in lg) and 'WOMEN' not in lg: return (1, 2, feed_idx)
+            if 'CONFERENCE LEAGUE' in lg and 'WOMEN' not in lg: return (1, 3, feed_idx)
             if ('SERIE A' in lg) and ('ITALI' in lg or 'ITALY' in lg or lg == 'SERIE A') and 'WOMEN' not in lg and 'FEMMINILE' not in lg:
-                return (1, 1, feed_idx)
-            if ('SERIE B' in lg) and ('ITALI' in lg or 'ITALY' in lg or lg == 'SERIE B') and 'WOMEN' not in lg:
-                return (1, 2, feed_idx)
-            if ('COPPA ITALIA' in lg or 'SUPERCOPPA' in lg) and ('ITALI' in lg or 'ITALY' in lg):
-                return (1, 3, feed_idx)
-            if 'CHAMPIONS LEAGUE' in lg and ('EUROPE' in lg or 'EUROPA' in lg or 'UEFA' in lg) and 'WOMEN' not in lg:
                 return (1, 4, feed_idx)
-            if 'EUROPA LEAGUE' in lg and ('EUROPE' in lg or 'EUROPA' in lg or 'UEFA' in lg) and 'WOMEN' not in lg:
-                return (1, 5, feed_idx)
-            if 'CONFERENCE LEAGUE' in lg and 'WOMEN' not in lg:
-                return (1, 6, feed_idx)
             if ('PREMIER LEAGUE' in lg) and ('ENGLAND' in lg or 'INGHILTERRA' in lg) and 'CUP' not in lg and '2' not in lg and 'U21' not in lg and 'WOMEN' not in lg:
-                return (1, 7, feed_idx)
+                return (1, 5, feed_idx)
             if ('LALIGA' in lg) and ('SPAIN' in lg or 'SPAGNA' in lg) and '2' not in lg and 'HYPERMOTION' not in lg and 'WOMEN' not in lg:
-                return (1, 8, feed_idx)
+                return (1, 6, feed_idx)
             if ('BUNDESLIGA' in lg) and ('GERMANY' in lg or 'GERMANIA' in lg) and '2' not in lg and 'WOMEN' not in lg:
-                return (1, 9, feed_idx)
+                return (1, 7, feed_idx)
             if ('LIGUE 1' in lg) and ('FRANCE' in lg or 'FRANCIA' in lg) and 'WOMEN' not in lg:
+                return (1, 8, feed_idx)
+            if ('COPPA ITALIA' in lg or 'SUPERCOPPA' in lg) and ('ITALI' in lg or 'ITALY' in lg):
+                return (1, 9, feed_idx)
+            if any(x in lg for x in ['FA CUP', 'COPA DEL REY', 'DFB POKAL', 'COUPE DE FRANCE']):
                 return (1, 10, feed_idx)
             if ('EREDIVISIE' in lg) and ('NETHERLANDS' in lg or 'OLANDA' in lg) and 'WOMEN' not in lg:
                 return (1, 11, feed_idx)
@@ -371,42 +542,48 @@ class FlashscorePalinsestoService:
                 return (1, 12, feed_idx)
             if 'NATIONS LEAGUE' in lg and 'WOMEN' not in lg:
                 return (1, 13, feed_idx)
-            if any(x in lg for x in ['EUROPEI', 'EURO QUAL', 'EURO CUP']) and 'U21' not in lg and 'WOMEN' not in lg:
+            if any(x in lg for x in ['EUROPEI', 'EURO QUAL', 'EURO CUP', 'MONDIALI', 'WORLD CUP']) and 'U21' not in lg and 'U20' not in lg and 'U17' not in lg and 'WOMEN' not in lg:
                 return (1, 14, feed_idx)
-            if any(x in lg for x in ['MONDIALI', 'WORLD CUP']) and 'U20' not in lg and 'U17' not in lg and 'WOMEN' not in lg:
-                return (1, 15, feed_idx)
 
-            # Tier 2: Campionati di Rilievo & Coppe Nazionali
-            if 'SERIE C' in lg: return (2, 1, feed_idx)
+            # Tier 2: 2a Divisione Top Europee + 1a Divisione di tutti gli altri Campionati Europei
+            if ('SERIE B' in lg) and ('ITALI' in lg or 'ITALY' in lg or lg == 'SERIE B') and 'WOMEN' not in lg:
+                return (2, 1, feed_idx)
             if 'CHAMPIONSHIP' in lg and ('ENGLAND' in lg or 'INGHILTERRA' in lg): return (2, 2, feed_idx)
-            if any(x in lg for x in ['FA CUP', 'EFL CUP', 'EFL TROPHY']) and ('ENGLAND' in lg or 'INGHILTERRA' in lg): return (2, 3, feed_idx)
-            if any(x in lg for x in ['COPA DEL REY', 'LALIGA2', 'HYPERMOTION']): return (2, 4, feed_idx)
-            if any(x in lg for x in ['2. BUNDESLIGA', 'DFB POKAL']): return (2, 5, feed_idx)
-            if any(x in lg for x in ['LIGUE 2', 'COUPE DE FRANCE']): return (2, 6, feed_idx)
-            if 'LIGA PORTUGAL 2' in lg: return (2, 7, feed_idx)
-            if 'SUPER LIG' in lg and ('TURKEY' in lg or 'TURCHIA' in lg): return (2, 8, feed_idx)
-            if 'JUPILER' in lg and ('BELGIUM' in lg or 'BELGIO' in lg): return (2, 9, feed_idx)
-            if 'SAUDI' in lg and ('LEAGUE' in lg or 'DIVISION' in lg): return (2, 10, feed_idx)
-            if ('SERIE A' in lg or 'COPA DO BRASIL' in lg) and ('BRAZIL' in lg or 'BRASILE' in lg): return (2, 11, feed_idx)
-            if 'LIGA PROFESIONAL' in lg and ('ARGENTINA' in lg): return (2, 12, feed_idx)
-            if any(x in lg for x in ['LIBERTADORES', 'SUDAMERICANA', 'AFC CHAMPIONS LEAGUE']): return (2, 13, feed_idx)
-            if 'MLS' in lg or 'MAJOR LEAGUE SOCCER' in lg: return (2, 14, feed_idx)
+            if any(x in lg for x in ['LALIGA2', 'HYPERMOTION', 'SEGUNDA DIVISION']) and ('SPAIN' in lg or 'SPAGNA' in lg): return (2, 3, feed_idx)
+            if '2. BUNDESLIGA' in lg: return (2, 4, feed_idx)
+            if 'LIGUE 2' in lg: return (2, 5, feed_idx)
+            # Altri campionati Europei di 1a divisione
+            if any(x in lg for x in ['SUPER LIG', 'JUPILER', 'PREMIERSHIP', 'SUPER LEAGUE', 'EKSTRAKLASA', 'ELITESERIEN', 'ALLSVENSKAN', 'SUPERLIGA', '1. HNL', 'A LYGA', 'CYPRUS', 'AUSTRIA', 'SCOTLAND']):
+                return (2, 10, feed_idx)
+            # Coppe di lega
+            if any(x in lg for x in ['EFL CUP', 'EFL TROPHY', 'TAÇA DE PORTUGAL', 'KNVB BEKER']):
+                return (2, 15, feed_idx)
 
-            # Tier 3: Tutto il resto nell'ordine naturale del feed Flashscore
-            return (3, feed_idx, feed_idx)
+            # Tier 3: 2a Divisione di altri campionati europei + Serie C
+            if 'SERIE C' in lg: return (3, 1, feed_idx)
+            if any(x in lg for x in ['LIGA PORTUGAL 2', 'EERSTE DIVISIE', 'EFL LEAGUE ONE', 'EFL LEAGUE TWO', '3. LIGA', 'CHALLENGER PRO LEAGUE']):
+                return (3, 2, feed_idx)
+
+            # Tier 4: Campionati 1a e 2a Divisione Resto del Mondo (Sud America, Asia, USA)
+            if any(x in lg for x in ['LIBERTADORES', 'SUDAMERICANA', 'AFC CHAMPIONS LEAGUE']): return (4, 1, feed_idx)
+            if ('SERIE A' in lg or 'COPA DO BRASIL' in lg or 'SERIE B' in lg) and ('BRAZIL' in lg or 'BRASILE' in lg): return (4, 2, feed_idx)
+            if 'LIGA PROFESIONAL' in lg or 'ARGENTINA' in lg: return (4, 3, feed_idx)
+            if 'MLS' in lg or 'MAJOR LEAGUE SOCCER' in lg: return (4, 4, feed_idx)
+            if 'SAUDI' in lg: return (4, 5, feed_idx)
+            if any(x in lg for x in ['J1 LEAGUE', 'K LEAGUE', 'LIGA MX']): return (4, 6, feed_idx)
+
+            # Tier 5: Resto dei campionati e tornei minori
+            return (5, feed_idx, feed_idx)
         else:
-            # Tennis
+            # Tennis: Grand Slam, ATP/WTA Masters/Tour, Challenger, ITF (Solo Singolari)
             if any(x in lg for x in ['AUSTRALIAN OPEN', 'ROLAND GARROS', 'OPEN DI FRANCIA', 'FRENCH OPEN', 'WIMBLEDON', 'US OPEN']):
                 return (1, 1, feed_idx)
-            if 'ATP - SINGLES' in lg or 'ATP - SINGOLARE' in lg: return (1, 2, feed_idx)
-            if 'WTA - SINGLES' in lg or 'WTA - SINGOLARE' in lg: return (1, 3, feed_idx)
-            if 'ATP - DOUBLES' in lg or 'ATP - DOPPIO' in lg: return (1, 4, feed_idx)
-            if 'WTA - DOUBLES' in lg or 'WTA - DOPPIO' in lg: return (1, 5, feed_idx)
-            if 'CHALLENGER MEN - SINGLES' in lg or 'CHALLENGER UOMINI - SINGOLARE' in lg: return (2, 1, feed_idx)
-            if 'CHALLENGER WOMEN - SINGLES' in lg or 'CHALLENGER DONNE - SINGOLARE' in lg: return (2, 2, feed_idx)
-            if 'CHALLENGER' in lg and ('DOUBLES' in lg or 'DOPPIO' in lg): return (2, 3, feed_idx)
-            if 'ITF MEN' in lg or 'ITF UOMINI' in lg: return (3, 1, feed_idx)
-            if 'ITF WOMEN' in lg or 'ITF DONNE' in lg: return (3, 2, feed_idx)
+            if 'ATP' in lg and ('1000' in lg or 'MASTERS' in lg): return (1, 2, feed_idx)
+            if 'WTA' in lg and ('1000' in lg): return (1, 3, feed_idx)
+            if 'ATP - SINGLES' in lg or 'ATP - SINGOLARE' in lg or ('ATP' in lg and 'DOUBLES' not in lg and 'DOPPIO' not in lg): return (1, 4, feed_idx)
+            if 'WTA - SINGLES' in lg or 'WTA - SINGOLARE' in lg or ('WTA' in lg and 'DOUBLES' not in lg and 'DOPPIO' not in lg): return (1, 5, feed_idx)
+            if 'CHALLENGER' in lg and ('DOUBLES' not in lg and 'DOPPIO' not in lg): return (2, 1, feed_idx)
+            if 'ITF' in lg and ('DOUBLES' not in lg and 'DOPPIO' not in lg): return (3, 1, feed_idx)
             return (4, feed_idx, feed_idx)
 
     @staticmethod
@@ -445,7 +622,7 @@ class FlashscorePalinsestoService:
             if r_sched.status_code == 200:
                 curr_league = "Generale"
                 curr_league_idx = 0
-                curr_sort_key = (3, 9999, 9999)
+                curr_sort_key = (5, 9999, 9999)
                 match_counter = 0
                 for row in r_sched.text.split("~"):
                     f = {}
@@ -457,10 +634,19 @@ class FlashscorePalinsestoService:
                         curr_league_idx += 1
                         curr_sort_key = FlashscorePalinsestoService.get_tournament_sort_key(sport_id, curr_league, curr_league_idx)
                     elif "AA" in f:
-                        mid = f["AA"]
-                        match_counter += 1
                         home = f.get("AE", "Casa").strip()
                         away = f.get("AF", "Ospite").strip()
+
+                        # FILTRO TENNIS: SCARTA I DOPPI (SOLO SINGOLARI)
+                        if sport_id == 2:
+                            up_lg = curr_league.upper()
+                            if any(d_kw in up_lg for d_kw in ['DOUBLE', 'DOPPI', 'MIXED', 'MISTO']):
+                                continue
+                            if '/' in home or '/' in away:
+                                continue
+
+                        mid = f["AA"]
+                        match_counter += 1
                         ts = f.get("AD", "")
                         time_str = "--:--"
                         if ts:
@@ -490,7 +676,7 @@ class FlashscorePalinsestoService:
                             "odds_str": q_str
                         })
 
-                # Ordina: campionati principali prima, mantenendo l'ordine dei match nel torneo
+                # Ordina: campionati principali ed europei prima, mantenendo l'ordine dei match nel torneo
                 matches.sort(key=lambda m: (m.get("league_sort_key", (99, 9999, 9999)), m.get("feed_order", 0)))
         except Exception: pass
         return matches
@@ -509,36 +695,6 @@ favorites = {}
 cached_palinsesto = []
 last_palinsesto_time = 0
 
-def get_palinsesto(force=False):
-    global cached_palinsesto, last_palinsesto_time
-    now = time.time()
-    if not force and cached_palinsesto and (now - last_palinsesto_time < 90):
-        return cached_palinsesto
-    try:
-        fb = FlashscorePalinsestoService.fetch_all_today(sport_id=1, day_offset=0)
-        tn = FlashscorePalinsestoService.fetch_all_today(sport_id=2, day_offset=0)
-
-        def tier(m):
-            sk = m.get("league_sort_key", (3, 9999, 9999))
-            return sk[0] if isinstance(sk, (tuple, list)) else 3
-
-        # Gerarchia: Tier 1 Calcio (Serie A, Premier, LaLiga...) + Tier 1 Tennis (Grand Slam, ATP, WTA) in cima
-        # poi Tier 2 Calcio (Serie C, Championship, Coppe...) + Tier 2 Tennis (Challenger)
-        # poi il resto (Tier 3 / ITF / campionati minori)
-        fb_t1 = [m for m in fb if tier(m) == 1]
-        tn_t1 = [m for m in tn if tier(m) == 1]
-        fb_t2 = [m for m in fb if tier(m) == 2]
-        tn_t2 = [m for m in tn if tier(m) == 2]
-        fb_rest = [m for m in fb if tier(m) >= 3]
-        tn_rest = [m for m in tn if tier(m) >= 3]
-
-        all_m = fb_t1 + tn_t1 + fb_t2 + tn_t2 + fb_rest + tn_rest
-        cached_palinsesto = all_m
-        last_palinsesto_time = now
-    except Exception:
-        pass
-    return cached_palinsesto
-
 SCHEDINE_FILE = "schedine_salvate.json"
 active_schedina_name = "Schedina Principale"
 schedine_store = {}
@@ -556,7 +712,6 @@ def load_schedine_data():
             pass
 
     if not schedine_store:
-        # Carica da FAV_FILE se esiste
         fav_legacy = {}
         if os.path.exists(FAV_FILE):
             try:
@@ -586,7 +741,6 @@ def save_schedine_data():
         }
         with open(SCHEDINE_FILE, "w", encoding="utf-8") as f:
             json.dump(payload, f, indent=2, ensure_ascii=False)
-        # Sincronizza anche con FAV_FILE per retrocompatibilità desktop
         with open(FAV_FILE, "w", encoding="utf-8") as f:
             json.dump(favorites, f, indent=2, ensure_ascii=False)
     except Exception:
@@ -598,11 +752,91 @@ def load_saved_favorites():
 def save_favorites():
     save_schedine_data()
 
+def verifica_esito(m):
+    """
+    Verifica automatica dell'esito della partita in schedina.
+    Ritorna: (stato, badge_text, css_class)
+    Stati possibili: 'WIN' (Preso), 'LOST' (Non Preso), 'LIVE' (In corso), 'PENDING' (In attesa)
+    """
+    status_code = str(m.get("status_code", "1"))
+    score_str = str(m.get("score", "- : -")).strip()
+    chosen = str(m.get("custom_pick") or m.get("raw_pick") or "").upper().strip()
+    sport = m.get("sport", "Calcio")
+
+    if not chosen:
+        return "PENDING", "⏳ IN ATTESA", "pending"
+
+    if status_code in ("1", "") and (not score_str or score_str in ("- : -", "-:-", "-")):
+        return "PENDING", "⏳ IN ATTESA", "pending"
+
+    is_live = (status_code == "2")
+    is_finished = (status_code == "3")
+
+    home_score = None
+    away_score = None
+    parts = re.split(r'[:\-]', score_str)
+    if len(parts) >= 2:
+        try:
+            h_clean = re.sub(r'[^\d]', '', parts[0].strip())
+            a_clean = re.sub(r'[^\d]', '', parts[1].strip())
+            if h_clean.isdigit() and a_clean.isdigit():
+                home_score = int(h_clean)
+                away_score = int(a_clean)
+        except Exception:
+            pass
+
+    if home_score is None or away_score is None:
+        if is_live:
+            return "LIVE", f"🟡 LIVE ({score_str})", "live"
+        return "PENDING", "⏳ IN ATTESA", "pending"
+
+    if sport == "Calcio":
+        if home_score > away_score: esito_reale = "1"
+        elif home_score == away_score: esito_reale = "X"
+        else: esito_reale = "2"
+
+        preso = False
+        if chosen == "1" and esito_reale == "1": preso = True
+        elif chosen == "X" and esito_reale == "X": preso = True
+        elif chosen == "2" and esito_reale == "2": preso = True
+        elif chosen == "1X" and esito_reale in ("1", "X"): preso = True
+        elif chosen == "X2" and esito_reale in ("X", "2"): preso = True
+        elif chosen == "12" and esito_reale in ("1", "2"): preso = True
+
+        if is_finished:
+            if preso: return "WIN", f"✅ PRESO ({home_score}-{away_score})", "win"
+            else: return "LOST", f"❌ NON PRESO ({home_score}-{away_score})", "lost"
+        else:
+            tag = "🟡 VANTAGGIO" if preso else "🟡 SVANTAGGIO"
+            return "LIVE", f"{tag} ({home_score}-{away_score})", "live"
+    else:
+        # Tennis
+        tot_set = home_score + away_score
+        if "OVER" in chosen or "SET" in chosen:
+            if tot_set >= 3:
+                return "WIN", f"✅ PRESO 3° SET ({home_score}-{away_score})", "win"
+            elif is_finished:
+                return "LOST", f"❌ FINITO IN 2 SET ({home_score}-{away_score})", "lost"
+            else:
+                return "LIVE", f"🟡 SET: {home_score}-{away_score}", "live"
+        else:
+            vince_p1 = (home_score > away_score)
+            vince_p2 = (away_score > home_score)
+            is_g1 = ("1" in chosen or "G1" in chosen)
+            is_g2 = ("2" in chosen or "G2" in chosen)
+            preso = (is_g1 and vince_p1) or (is_g2 and vince_p2)
+            if is_finished:
+                if preso: return "WIN", f"✅ PRESO ({home_score}-{away_score})", "win"
+                else: return "LOST", f"❌ NON PRESO ({home_score}-{away_score})", "lost"
+            else:
+                tag = "🟡 VANTAGGIO" if preso else "🟡 SVANTAGGIO"
+                return "LIVE", f"{tag} ({home_score}-{away_score})", "live"
+
 def calcola_quota_effettiva(m):
     q = m.get("odds")
     if not q:
         return 1.00
-    chosen = m.get("custom_pick") or m.get("raw_pick") or "1"
+    chosen = str(m.get("custom_pick") or m.get("raw_pick") or "1").strip().upper()
     sp = m.get("sport", "Calcio")
     try:
         if sp == "Calcio" and len(q) == 3:
@@ -616,7 +850,9 @@ def calcola_quota_effettiva(m):
             return q1
         elif sp == "Tennis" and len(q) >= 2:
             q1, q2 = float(q[0]), float(q[1])
-            if "2" in chosen: return q2
+            if "OVER" in chosen or "SET" in chosen:
+                return float(m.get("over_set_quota", 2.05))
+            if "2" in chosen or "G2" in chosen: return q2
             return q1
     except Exception:
         pass
@@ -624,6 +860,8 @@ def calcola_quota_effettiva(m):
 
 def elabora_algoritmo(m):
     q = m.get("odds")
+    home = m.get("home", "")
+    away = m.get("away", "")
     if not q:
         m["pick_str"] = "Quote N.D."
         m["pick_title"] = "In attesa delle quote ufficiali"
@@ -631,10 +869,13 @@ def elabora_algoritmo(m):
         m["full_report"] = ["Quote non disponibili."]
         m["raw_pick"] = None
         m["effective_quota"] = 1.00
+        m["esito_stato"] = "PENDING"
+        m["esito_testo"] = "⏳ IN ATTESA"
+        m["esito_css"] = "pending"
         return
     sp = m.get("sport", "Calcio")
     if sp == "Calcio" and len(q) == 3:
-        res = analizza_calcio(fb_db, q[0], q[1], q[2])
+        res = analizza_calcio(fb_db, q[0], q[1], q[2], home=home, away=away)
         if res:
             livello, verdetto, summ, full = report_calcio(res, q)
             icon = "🎯" if livello == "ok" else ("⚠️" if livello == "warn" else "🚨")
@@ -644,8 +885,9 @@ def elabora_algoritmo(m):
             m["pick_title"] = verdetto
             m["summary_lines"] = summ
             m["full_report"] = full
+            m["forma_summary"] = res.get("forma_summary", "")
     elif sp == "Tennis" and len(q) >= 2:
-        res = analizza_tennis(tn_db, q[0], q[1])
+        res = analizza_tennis(tn_db, q[0], q[1], p1=home, p2=away)
         if res:
             livello, verdetto, summ, full = report_tennis(res, q)
             icon = "🎯" if livello == "ok" else ("⚠️" if livello == "warn" else "🚨")
@@ -655,8 +897,49 @@ def elabora_algoritmo(m):
             m["pick_title"] = verdetto
             m["summary_lines"] = summ
             m["full_report"] = full
+            m["over_set_quota"] = res.get("over_set_quota", 2.05)
+            m["forma_summary"] = res.get("forma_summary", "")
 
     m["effective_quota"] = calcola_quota_effettiva(m)
+    stato, testo, css_cls = verifica_esito(m)
+    m["esito_stato"] = stato
+    m["esito_testo"] = testo
+    m["esito_css"] = css_cls
+
+def get_palinsesto(force=False):
+    global cached_palinsesto, last_palinsesto_time
+    now = time.time()
+    if not force and cached_palinsesto and (now - last_palinsesto_time < 90):
+        return cached_palinsesto
+    try:
+        fb = FlashscorePalinsestoService.fetch_all_today(sport_id=1, day_offset=0)
+        tn = FlashscorePalinsestoService.fetch_all_today(sport_id=2, day_offset=0)
+
+        def tier(m):
+            sk = m.get("league_sort_key", (5, 9999, 9999))
+            return sk[0] if isinstance(sk, (tuple, list)) else 5
+
+        # Ripartizione per Tier:
+        # Tier 1: Top Coppe Europee e 1a Divisione Top 5 Europei + Grand Slam / ATP / WTA Masters
+        # Tier 2: 2a Divisione Top Europei (Serie B, Championship, LaLiga2, 2.Bundesliga, Ligue 2) + altre 1e Div Europee + Challenger
+        # Tier 3: 2e Div minori europee + Serie C + ITF
+        # Tier 4: Campionati 1a/2a Div Resto del Mondo
+        # Tier 5: Minori
+        all_sorted = []
+        for t in [1, 2, 3, 4, 5]:
+            all_sorted.extend([m for m in fb if tier(m) == t])
+            all_sorted.extend([m for m in tn if tier(m) == t])
+
+        # Pre-calcola algoritmo sui primi 150 match con quote per visione immediata da smartphone!
+        for m in all_sorted:
+            if m.get("odds"):
+                elabora_algoritmo(m)
+
+        cached_palinsesto = all_sorted
+        last_palinsesto_time = now
+    except Exception:
+        pass
+    return cached_palinsesto
 
 # Precarica
 load_saved_favorites()
@@ -681,14 +964,52 @@ def index():
 def api_data():
     fav_list = list(favorites.values())
     tot_quota = 1.0
+    has_lost = False
+    all_win = len(fav_list) > 0
+    has_live = False
+
     for m in fav_list:
         tot_quota *= m.get("effective_quota", 1.0)
+        # Aggiorna verifica esito live
+        stato, testo, css_cls = verifica_esito(m)
+        m["esito_stato"] = stato
+        m["esito_testo"] = testo
+        m["esito_css"] = css_cls
+        if stato == "LOST":
+            has_lost = True
+            all_win = False
+        elif stato == "WIN":
+            pass
+        elif stato == "LIVE":
+            has_live = True
+            all_win = False
+        else:
+            all_win = False
+
+    if len(fav_list) == 0:
+        esito_complessivo = "EMPTY"
+        esito_label = "📋 Schedina vuota"
+    elif has_lost:
+        esito_complessivo = "LOST"
+        esito_label = "❌ SCHEDINA NON RIUSCITA"
+    elif all_win:
+        esito_complessivo = "WIN"
+        esito_label = "🎉 SCHEDINA VINCENTE!"
+    elif has_live:
+        esito_complessivo = "LIVE"
+        esito_label = "🟡 INCONTRI IN CORSO (LIVE)"
+    else:
+        esito_complessivo = "PENDING"
+        esito_label = "⏳ IN ATTESA DEGLI INCONTRI"
+
     return jsonify({
         "count": len(fav_list),
         "favorites": fav_list,
         "active_schedina": active_schedina_name,
         "schedine_list": list(schedine_store.keys()),
         "total_quota": round(tot_quota, 2),
+        "esito_complessivo": esito_complessivo,
+        "esito_label": esito_label,
         "timestamp": datetime.datetime.now().strftime("%H:%M:%S")
     })
 
@@ -827,6 +1148,50 @@ def api_recalculate():
     save_favorites()
     return jsonify({"status": "ok", "count": len(favorites)})
 
+@app.route("/api/schedine/new", methods=["POST"])
+def api_schedine_new():
+    global active_schedina_name, schedine_store, favorites
+    data = request.get_json(silent=True) or request.form
+    name = (data.get("name") or "").strip()
+    if not name:
+        return jsonify({"status": "error", "message": "Nome schedina obbligatorio"}), 400
+    if active_schedina_name:
+        schedine_store[active_schedina_name] = dict(favorites)
+    active_schedina_name = name
+    schedine_store[name] = {}
+    favorites = schedine_store[name]
+    save_schedine_data()
+    return jsonify({
+        "status": "ok",
+        "active": active_schedina_name,
+        "schedine_list": list(schedine_store.keys()),
+        "message": f"Creata schedina '{name}'"
+    })
+
+@app.route("/api/schedine/sync", methods=["POST"])
+def api_schedine_sync():
+    global active_schedina_name, schedine_store, favorites
+    data = request.get_json(silent=True) or {}
+    client_schedine = data.get("schedine")
+    client_active = data.get("active")
+    if client_schedine and isinstance(client_schedine, dict):
+        for s_name, s_matches in client_schedine.items():
+            if s_name not in schedine_store:
+                schedine_store[s_name] = s_matches
+            elif not schedine_store[s_name] and s_matches:
+                schedine_store[s_name] = s_matches
+    if client_active and client_active in schedine_store:
+        active_schedina_name = client_active
+    favorites = schedine_store.get(active_schedina_name, {})
+    save_schedine_data()
+    return jsonify({
+        "status": "ok",
+        "active": active_schedina_name,
+        "schedine": schedine_store,
+        "schedine_list": list(schedine_store.keys()),
+        "count": len(favorites)
+    })
+
 @app.route("/api/schedine/save", methods=["POST"])
 def api_schedine_save():
     global active_schedina_name, schedine_store, favorites
@@ -837,7 +1202,7 @@ def api_schedine_save():
     active_schedina_name = name
     schedine_store[name] = dict(favorites)
     save_schedine_data()
-    return jsonify({"status": "ok", "name": name, "schedine_list": list(schedine_store.keys())})
+    return jsonify({"status": "ok", "active": name, "schedine_list": list(schedine_store.keys())})
 
 @app.route("/api/schedine/load", methods=["POST"])
 def api_schedine_load():
@@ -851,7 +1216,7 @@ def api_schedine_load():
     save_schedine_data()
     return jsonify({
         "status": "ok",
-        "name": name,
+        "active": name,
         "count": len(favorites),
         "favorites": list(favorites.values())
     })
@@ -864,13 +1229,15 @@ def api_schedine_delete():
     if not name or name not in schedine_store:
         return jsonify({"status": "error", "message": "Schedina non trovata"}), 404
     if len(schedine_store) <= 1:
-        favorites.clear()
+        schedine_store["Schedina Principale"] = {}
+        active_schedina_name = "Schedina Principale"
+        favorites = schedine_store[active_schedina_name]
         save_schedine_data()
-        return jsonify({"status": "ok", "message": "Schedina svuotata (unica presente)"})
+        return jsonify({"status": "ok", "active": active_schedina_name, "schedine_list": list(schedine_store.keys())})
     del schedine_store[name]
     if active_schedina_name == name:
         active_schedina_name = list(schedine_store.keys())[0]
-        favorites = schedine_store[active_schedina_name]
+    favorites = schedine_store[active_schedina_name]
     save_schedine_data()
     return jsonify({
         "status": "ok",
@@ -910,6 +1277,10 @@ def download_schedina():
 def render_mobile_html():
     fav_cards_html = []
     tot_quota = 1.0
+    has_lost = False
+    all_win = len(favorites) > 0
+    has_live = False
+
     for m in favorites.values():
         mid = m.get("id")
         home = m.get("home", "Casa")
@@ -928,13 +1299,31 @@ def render_mobile_html():
         details_block = f'<button class="details-btn" onclick="toggleDetails(this)">Visualizza Analisi Completa ▼</button><div class="details-panel">{full_rep_text}</div>' if full_rep_text else ''
         eq = m.get("effective_quota", 1.0)
         tot_quota *= eq
-        current_pick = m.get("custom_pick") or m.get("raw_pick") or ""
+        current_pick = str(m.get("custom_pick") or m.get("raw_pick") or "").upper().strip()
+
+        # Verifica esito match
+        stato, testo_esito, css_esito = verifica_esito(m)
+        m["esito_stato"] = stato
+        m["esito_testo"] = testo_esito
+        m["esito_css"] = css_esito
+        if stato == "LOST":
+            has_lost = True
+            all_win = False
+        elif stato == "WIN":
+            pass
+        elif stato == "LIVE":
+            has_live = True
+            all_win = False
+        else:
+            all_win = False
+
+        status_badge_html = f'<span class="status-pill {css_esito}">{testo_esito}</span>'
 
         # Bottoni selezione esito schedina
         if sport == "Calcio":
             pick_pills = f'''
             <div class="pick-selector">
-                <span class="pick-sel-lbl">Esito Schedina (@{eq:.2f}):</span>
+                <span class="pick-sel-lbl">Esito Scelto (@{eq:.2f}):</span>
                 <button class="pick-btn {'active' if current_pick == '1' else ''}" onclick="cambiaEsito('{mid}', '1')">1</button>
                 <button class="pick-btn {'active' if current_pick == 'X' else ''}" onclick="cambiaEsito('{mid}', 'X')">X</button>
                 <button class="pick-btn {'active' if current_pick == '2' else ''}" onclick="cambiaEsito('{mid}', '2')">2</button>
@@ -944,19 +1333,24 @@ def render_mobile_html():
             </div>
             '''
         else:
+            over_q = m.get("over_set_quota", 2.05)
             pick_pills = f'''
             <div class="pick-selector">
-                <span class="pick-sel-lbl">Esito Schedina (@{eq:.2f}):</span>
-                <button class="pick-btn {'active' if '1' in current_pick else ''}" onclick="cambiaEsito('{mid}', 'G1')">G1</button>
-                <button class="pick-btn {'active' if '2' in current_pick else ''}" onclick="cambiaEsito('{mid}', 'G2')">G2</button>
+                <span class="pick-sel-lbl">Esito Scelto (@{eq:.2f}):</span>
+                <button class="pick-btn {'active' if ('1' in current_pick or 'G1' in current_pick) and 'OVER' not in current_pick else ''}" onclick="cambiaEsito('{mid}', 'G1')">G1</button>
+                <button class="pick-btn {'active' if ('2' in current_pick or 'G2' in current_pick) and 'OVER' not in current_pick else ''}" onclick="cambiaEsito('{mid}', 'G2')">G2</button>
+                <button class="pick-btn {'active' if 'OVER' in current_pick or 'SET' in current_pick else ''}" onclick="cambiaEsito('{mid}', 'OVER 2.5 SET')">OVER 2.5 SET (@{over_q:.2f})</button>
             </div>
             '''
 
         card_html = f'''
-        <div class="card" id="card_{mid}">
+        <div class="card card-{css_esito}" id="card_{mid}">
             <div class="card-top">
                 <span class="league-badge">{sp_icon} {league}</span>
-                <span class="match-time">⏱ {time_str}</span>
+                <div style="display:flex; align-items:center; gap:6px;">
+                    {status_badge_html}
+                    <span class="match-time">⏱ {time_str}</span>
+                </div>
             </div>
             <div class="teams">{home} vs {away} {score_badge}</div>
             <div class="odds-row">
@@ -980,9 +1374,21 @@ def render_mobile_html():
         '''
         fav_cards_html.append(card_html)
 
-    cards_content = "\n".join(fav_cards_html) if fav_cards_html else '<div class="empty-slip-box"><span>📋 Schedina Attualmente Vuota</span><p>Tocca <b>⚽ Palinsesto Oggi</b> per aggiungere le partite con 1 tap, oppure incolla un link Diretta/Flashscore qui sopra!</p></div>'
+    cards_content = "\n".join(fav_cards_html) if fav_cards_html else '<div class="empty-slip-box"><span>📋 Schedina Attualmente Vuota</span><p>Tocca <b>⚽ Palinsesto Oggi</b> per esplorare i pronostici elaborati in tempo reale e aggiungere partite con 1 tap!</p></div>'
     n_fav = len(favorites)
     schedine_options = "".join(f'<option value="{name}" {"selected" if name == active_schedina_name else ""}>{name} ({len(schedine_store.get(name, {}))})</option>' for name in schedine_store)
+
+    # Banner verifica complessiva
+    if n_fav == 0:
+        outcome_banner_html = ''
+    elif has_lost:
+        outcome_banner_html = '<div class="outcome-banner lost">❌ SCHEDINA NON RIUSCITA • Uno o più pronostici non centrati</div>'
+    elif all_win:
+        outcome_banner_html = '<div class="outcome-banner win">🎉 SCHEDINA VINCENTE! • Tutti gli esiti sono stati centrati!</div>'
+    elif has_live:
+        outcome_banner_html = '<div class="outcome-banner live">🟡 VERIFICA IN CORSO • Partite in svolgimento LIVE</div>'
+    else:
+        outcome_banner_html = '<div class="outcome-banner pending">⏳ VERIFICA ATTIVA • In attesa della conclusione degli eventi</div>'
 
     return f'''<!DOCTYPE html>
 <html lang="it">
@@ -1036,6 +1442,44 @@ def render_mobile_html():
             gap: 4px;
         }}
         .live-dot {{ width: 6px; height: 6px; background: var(--green); border-radius: 50%; display: inline-block; }}
+
+        /* Banner Verifica Esito Schedina */
+        .outcome-banner {{
+            padding: 10px 14px;
+            border-radius: 10px;
+            font-size: 12px;
+            font-weight: 800;
+            text-align: center;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        }}
+        .outcome-banner.win {{ background: rgba(34, 197, 94, 0.2); border: 1px solid var(--green); color: #4ade80; }}
+        .outcome-banner.lost {{ background: rgba(239, 68, 68, 0.2); border: 1px solid var(--red); color: #f87171; }}
+        .outcome-banner.live {{ background: rgba(245, 158, 11, 0.2); border: 1px solid var(--amber); color: #fbbf24; }}
+        .outcome-banner.pending {{ background: rgba(56, 189, 248, 0.15); border: 1px solid var(--acc); color: #7dd3fc; }}
+
+        /* Status Badge Singola Partita */
+        .status-pill {{
+            font-size: 10px;
+            font-weight: 800;
+            padding: 2px 7px;
+            border-radius: 12px;
+            display: inline-block;
+            white-space: nowrap;
+        }}
+        .status-pill.win {{ background: rgba(34, 197, 94, 0.25); color: #4ade80; border: 1px solid var(--green); }}
+        .status-pill.lost {{ background: rgba(239, 68, 68, 0.25); color: #f87171; border: 1px solid var(--red); }}
+        .status-pill.live {{ background: rgba(245, 158, 11, 0.25); color: #fbbf24; border: 1px solid var(--amber); }}
+        .status-pill.pending {{ background: rgba(148, 163, 184, 0.2); color: var(--dim); border: 1px solid var(--border); }}
+
+        /* Card color accent per esiti */
+        .card.card-win {{ border-left: 3px solid var(--green); }}
+        .card.card-lost {{ border-left: 3px solid var(--red); }}
+        .card.card-live {{ border-left: 3px solid var(--amber); }}
 
         /* Bar Gestione Multi-Schedine */
         .schedine-bar {{
@@ -1327,7 +1771,7 @@ def render_mobile_html():
         .empty-slip-box span {{ font-size: 14px; font-weight: 800; color: #fff; display: block; margin-bottom: 6px; }}
         .empty-slip-box p {{ font-size: 11px; line-height: 1.5; }}
 
-        /* Palinsesto */
+        /* Palinsesto Mobile */
         .pal-filter-pills {{ display: flex; gap: 6px; margin-bottom: 10px; overflow-x: auto; padding-bottom: 2px; }}
         .pill-btn {{
             background: var(--card);
@@ -1368,23 +1812,69 @@ def render_mobile_html():
         .pal-card {{
             background: var(--card);
             border: 1px solid var(--border);
-            border-radius: 10px;
-            padding: 8px 10px;
+            border-radius: 12px;
+            padding: 10px;
+            margin-bottom: 8px;
+            box-shadow: 0 3px 8px rgba(0,0,0,0.2);
+        }}
+        .pal-top-row {{
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 6px;
+            margin-bottom: 4px;
         }}
-        .pal-info {{ flex: 1; }}
-        .pal-teams {{ font-size: 13px; font-weight: 700; color: var(--txt); margin: 3px 0; }}
-        .pal-odds {{ font-size: 11px; color: var(--acc); font-weight: 600; }}
+        .pal-teams {{ font-size: 13px; font-weight: 800; color: #fff; margin: 3px 0; }}
+        .pal-odds-bar {{
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: var(--card-sub);
+            padding: 4px 8px;
+            border-radius: 6px;
+            margin: 6px 0;
+        }}
+        .pal-odds-val {{ font-size: 11px; color: var(--acc); font-weight: 700; }}
+        /* Box pronostico immediato nel palinsesto */
+        .pal-pred-box {{
+            background: rgba(56, 189, 248, 0.1);
+            border: 1px solid rgba(56, 189, 248, 0.3);
+            border-radius: 8px;
+            padding: 6px 8px;
+            margin-top: 6px;
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }}
+        .pal-pred-head {{
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }}
+        .pal-pred-badge {{
+            font-size: 10px;
+            font-weight: 800;
+            background: var(--acc);
+            color: #0b0f19;
+            padding: 2px 6px;
+            border-radius: 4px;
+        }}
+        .pal-pred-title {{
+            font-size: 10px;
+            font-weight: 700;
+            color: #e2e8f0;
+        }}
+        .pal-forma-txt {{
+            font-size: 9px;
+            color: #94a3b8;
+            margin-top: 2px;
+        }}
         .pal-btn-add {{
             background: rgba(34, 197, 94, 0.2);
             border: 1px solid var(--green);
             color: var(--green);
-            padding: 7px 12px;
-            border-radius: 8px;
-            font-size: 12px;
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 11px;
             font-weight: 700;
             cursor: pointer;
             white-space: nowrap;
@@ -1416,7 +1906,7 @@ def render_mobile_html():
 <body>
     <div class="header">
         <div class="logo">⚡ QUOTE BOOSTER PRO</div>
-        <div class="live-tag"><span class="live-dot"></span> LIVE 24/7</div>
+        <div class="live-tag"><span class="live-dot"></span> LIVE VERIFICA 24/7</div>
     </div>
 
     <!-- SELETTORE MULTI-SCHEDINE -->
@@ -1437,6 +1927,11 @@ def render_mobile_html():
 
     <!-- SEZIONE SCHEDINA ATTIVA -->
     <div id="sectionFav">
+        <!-- BANNER VERIFICA ESITO COMPLESSIVO -->
+        <div id="outcomeBannerContainer">
+            {outcome_banner_html}
+        </div>
+
         <!-- BOX MOLTIPLICATORE & VINCITA -->
         <div class="schedina-summary-box">
             <div class="schedina-summary-row">
@@ -1485,14 +1980,16 @@ def render_mobile_html():
     <div id="sectionPal" style="display: none;">
         <div class="pal-filter-pills">
             <button class="pill-btn active" id="pillAll" onclick="setSportFilter('ALL')">⭐ Tutti</button>
-            <button class="pill-btn" id="pillFb" onclick="setSportFilter('Calcio')">⚽ Calcio</button>
-            <button class="pill-btn" id="pillTn" onclick="setSportFilter('Tennis')">🎾 Tennis</button>
-            <button class="pill-btn" id="pillTop" onclick="setSportFilter('TOP')">🔥 Principali</button>
+            <button class="pill-btn" id="pillFb" onclick="setSportFilter('Calcio')">⚽ Calcio (1ª e 2ª Div)</button>
+            <button class="pill-btn" id="pillTn" onclick="setSportFilter('Tennis')">🎾 Tennis (Solo Singoli)</button>
+            <button class="pill-btn" id="pillTop" onclick="setSportFilter('TOP')">🔥 Top Europei</button>
         </div>
-        <input type="text" id="palSearchInput" class="pal-search" placeholder="🔍 Cerca squadra o torneo di oggi..." oninput="applicaFiltriPalinsesto()">
-        <div style="font-size: 11px; color: var(--dim); margin-bottom: 8px;">Tocca <b>⭐ Aggiungi</b> per inserire il match e calcolare il pronostico originale:</div>
+        <input type="text" id="palSearchInput" class="pal-search" placeholder="🔍 Cerca squadra, giocatore o campionato..." oninput="applicaFiltriPalinsesto()">
+        <div style="font-size: 11px; color: var(--dim); margin-bottom: 8px;">
+            ⚡ <b>Pronostico Algoritmo visibile subito</b> per ogni partita: tocca <b>⭐ Aggiungi</b> per inserire direttamente in schedina!
+        </div>
         <div id="palinsestoContainer" class="cards-list">
-            <div style="text-align: center; padding: 20px; color: var(--dim);">Caricamento palinsesto in corso...</div>
+            <div style="text-align: center; padding: 20px; color: var(--dim);">Caricamento palinsesto con pronostici in corso...</div>
         </div>
     </div>
 
@@ -1503,6 +2000,8 @@ def render_mobile_html():
         let favIds = {list(favorites.keys())};
         let currentSportFilter = 'ALL';
         let currentTotalQuota = {tot_quota};
+        const STORAGE_KEY_SCHEDINE = 'qb_schedine_pro_v2';
+        const STORAGE_KEY_ACTIVE = 'qb_active_schedina_v2';
 
         function showToast(msg) {{
             const t = document.getElementById('toast');
@@ -1590,20 +2089,33 @@ def render_mobile_html():
                     html += `
                     <div class="pal-league-hdr ${{isTop ? 'top' : ''}}">
                         <span>${{spIcon}} ${{isTop ? '🔥 ' : ''}}${{m.league}}</span>
-                        ${{isTop ? '<span style="font-size:9px; background:#f59e0b; color:#000; padding:2px 6px; border-radius:4px; font-weight:800;">TOP</span>' : ''}}
+                        ${{isTop ? '<span style="font-size:9px; background:#f59e0b; color:#000; padding:2px 6px; border-radius:4px; font-weight:800;">TOP EUROPEI</span>' : ''}}
                     </div>`;
                 }}
                 const isFav = favIds.includes(m.id);
+                const hasPred = !!m.pick_str;
                 html += `
                 <div class="pal-card">
-                    <div class="pal-info">
-                        <div style="font-size:10px; color:var(--dim);">${{m.time}} • ${{m.status_code === '2' ? '<span style=\"color:var(--red); font-weight:800;\">LIVE ' + m.score + '</span>' : 'Programmata'}}</div>
-                        <div class="pal-teams">${{m.home}} vs ${{m.away}}</div>
-                        <div class="pal-odds">Quote: ${{m.odds_str || 'N.D.'}}</div>
+                    <div class="pal-top-row">
+                        <span style="font-size:10px; color:var(--dim);">${{m.time}} • ${{m.status_code === '2' ? '<span style=\"color:var(--red); font-weight:800;\">LIVE ' + m.score + '</span>' : 'Programmata'}}</span>
+                        <button class="pal-btn-add ${{isFav ? 'added' : ''}}" id="btn_pal_${{m.id}}" onclick="aggiungiDaPalinsesto('${{m.id}}')">
+                            ${{isFav ? '✓ In Schedina' : '⭐ Aggiungi'}}
+                        </button>
                     </div>
-                    <button class="pal-btn-add ${{isFav ? 'added' : ''}}" id="btn_pal_${{m.id}}" onclick="aggiungiDaPalinsesto('${{m.id}}')">
-                        ${{isFav ? '✓ In Schedina' : '⭐ Aggiungi'}}
-                    </button>
+                    <div class="pal-teams">${{m.home}} vs ${{m.away}}</div>
+                    <div class="pal-odds-bar">
+                        <span style="font-size:10px; color:var(--dim);">Quote Ufficiali:</span>
+                        <span class="pal-odds-val">${{m.odds_str || 'N.D.'}}</span>
+                    </div>
+                    ${{hasPred ? `
+                    <div class="pal-pred-box">
+                        <div class="pal-pred-head">
+                            <span class="pal-pred-badge">${{m.pick_str}}</span>
+                            <span class="pal-pred-title">${{m.pick_title || ''}}</span>
+                        </div>
+                        ${{m.forma_summary ? `<div class="pal-forma-txt">📈 Forma: ${{m.forma_summary}}</div>` : ''}}
+                    </div>
+                    ` : ''}}
                 </div>
                 `;
             }});
@@ -1630,6 +2142,7 @@ def render_mobile_html():
                         btn.innerText = '✓ In Schedina';
                     }}
                     showToast('✓ Aggiunta alla Schedina!');
+                    salvaBackupLocale();
                     aggiornaDatiSchedina();
                 }} else {{
                     if (btn) btn.innerText = '⭐ Aggiungi';
@@ -1681,6 +2194,7 @@ def render_mobile_html():
                         btnPal.classList.remove('added');
                         btnPal.innerText = '⭐ Aggiungi';
                     }}
+                    salvaBackupLocale();
                     showToast('Partita rimossa dalla schedina');
                     aggiornaDatiSchedina();
                 }}
@@ -1699,16 +2213,19 @@ def render_mobile_html():
                 const data = await res.json();
                 if (data.status === 'ok') {{
                     favIds = [];
-                    document.getElementById('cardsContainer').innerHTML = '<div class="empty-slip-box"><span>📋 Schedina Attualmente Vuota</span><p>Tocca <b>⚽ Palinsesto Oggi</b> per aggiungere le partite con 1 tap, oppure incolla un link Diretta/Flashscore qui sopra!</p></div>';
+                    document.getElementById('cardsContainer').innerHTML = '<div class="empty-slip-box"><span>📋 Schedina Attualmente Vuota</span><p>Tocca <b>⚽ Palinsesto Oggi</b> per esplorare i pronostici elaborati in tempo reale e aggiungere partite con 1 tap!</p></div>';
                     document.querySelectorAll('.pal-btn-add').forEach(b => {{
                         b.classList.remove('added');
                         b.innerText = '⭐ Aggiungi';
                     }});
+                    const outcomeBanner = document.getElementById('outcomeBannerContainer');
+                    if (outcomeBanner) outcomeBanner.innerHTML = '';
                     currentTotalQuota = 1.0;
                     document.getElementById('statCount').innerText = '0';
                     document.getElementById('tabCount').innerText = '0';
                     document.getElementById('statQuota').innerText = '@1.00';
                     aggiornaCalcoloVincita();
+                    salvaBackupLocale();
                     showToast('✓ Tutta la schedina è stata cancellata!');
                 }}
             }} catch (err) {{
@@ -1726,6 +2243,7 @@ def render_mobile_html():
                 const data = await res.json();
                 if (data.status === 'ok') {{
                     showToast('✓ Esito aggiornato a ' + pick);
+                    salvaBackupLocale();
                     setTimeout(() => location.reload(), 400);
                 }}
             }} catch (err) {{
@@ -1753,6 +2271,7 @@ def render_mobile_html():
                 const data = await res.json();
                 if (data.status === 'ok') {{
                     showToast('✓ Quote aggiornate e pronostico ricalcolato!');
+                    salvaBackupLocale();
                     setTimeout(() => location.reload(), 500);
                 }}
             }} catch (err) {{
@@ -1761,12 +2280,13 @@ def render_mobile_html():
         }}
 
         async function ricalcolaTutto() {{
-            showToast('Ricalcolo quote e pronostici storici in corso...');
+            showToast('Ricalcolo quote e verifica esiti in corso...');
             try {{
                 const res = await fetch('/api/recalculate?_t=' + Date.now(), {{ method: 'POST' }});
                 const data = await res.json();
                 if (data.status === 'ok') {{
-                    showToast('✓ Ricalcolo completato con algoritmo originale!');
+                    showToast('✓ Ricalcolo ed esiti aggiornati!');
+                    salvaBackupLocale();
                     setTimeout(() => location.reload(), 400);
                 }}
             }} catch (err) {{
@@ -1778,14 +2298,14 @@ def render_mobile_html():
             const nome = prompt('Inserisci il nome per la nuova schedina (es. Schedina Raddoppio, Schedina Sabato):');
             if (!nome || !nome.trim()) return;
             try {{
-                await fetch('/api/clear?_t=' + Date.now(), {{ method: 'POST' }});
-                const res = await fetch('/api/schedine/save?_t=' + Date.now(), {{
+                const res = await fetch('/api/schedine/new?_t=' + Date.now(), {{
                     method: 'POST',
                     headers: {{ 'Content-Type': 'application/json' }},
                     body: JSON.stringify({{ name: nome.trim() }})
                 }});
                 const data = await res.json();
                 if (data.status === 'ok') {{
+                    localStorage.setItem(STORAGE_KEY_ACTIVE, nome.trim());
                     showToast('✓ Creata nuova schedina: ' + nome);
                     setTimeout(() => location.reload(), 400);
                 }}
@@ -1805,6 +2325,8 @@ def render_mobile_html():
                 }});
                 const data = await res.json();
                 if (data.status === 'ok') {{
+                    localStorage.setItem(STORAGE_KEY_ACTIVE, nome.trim());
+                    salvaBackupLocale();
                     showToast('✓ Schedina salvata come: ' + nome);
                     setTimeout(() => location.reload(), 400);
                 }}
@@ -1822,6 +2344,7 @@ def render_mobile_html():
                 }});
                 const data = await res.json();
                 if (data.status === 'ok') {{
+                    localStorage.setItem(STORAGE_KEY_ACTIVE, nome);
                     showToast('Caricamento: ' + nome);
                     setTimeout(() => location.reload(), 300);
                 }}
@@ -1842,7 +2365,13 @@ def render_mobile_html():
                 }});
                 const data = await res.json();
                 if (data.status === 'ok') {{
-                    showToast('Schedina eliminata');
+                    try {{
+                        let localSchedine = JSON.parse(localStorage.getItem(STORAGE_KEY_SCHEDINE) || '{{}}');
+                        delete localSchedine[nome];
+                        localStorage.setItem(STORAGE_KEY_SCHEDINE, JSON.stringify(localSchedine));
+                        localStorage.setItem(STORAGE_KEY_ACTIVE, data.active);
+                    }} catch (e) {{}}
+                    showToast('Schedina eliminata definitivamente');
                     setTimeout(() => location.reload(), 400);
                 }}
             }} catch (err) {{
@@ -1850,16 +2379,60 @@ def render_mobile_html():
             }}
         }}
 
+        async function salvaBackupLocale() {{
+            try {{
+                const res = await fetch('/api/data?_t=' + Date.now());
+                const data = await res.json();
+                let localSchedine = JSON.parse(localStorage.getItem(STORAGE_KEY_SCHEDINE) || '{{}}');
+                localSchedine[data.active_schedina] = {{}};
+                (data.favorites || []).forEach(m => {{
+                    localSchedine[data.active_schedina][m.id] = m;
+                }});
+                localStorage.setItem(STORAGE_KEY_SCHEDINE, JSON.stringify(localSchedine));
+                localStorage.setItem(STORAGE_KEY_ACTIVE, data.active_schedina);
+            }} catch (e) {{}}
+        }}
+
+        async function sincronizzaConLocalStorage() {{
+            try {{
+                const localStr = localStorage.getItem(STORAGE_KEY_SCHEDINE);
+                const localActive = localStorage.getItem(STORAGE_KEY_ACTIVE);
+                if (localStr) {{
+                    const localData = JSON.parse(localStr);
+                    await fetch('/api/schedine/sync?_t=' + Date.now(), {{
+                        method: 'POST',
+                        headers: {{ 'Content-Type': 'application/json' }},
+                        body: JSON.stringify({{ schedine: localData, active: localActive }})
+                    }});
+                }}
+            }} catch (e) {{}}
+        }}
+
         async function aggiornaDatiSchedina() {{
             try {{
                 const res = await fetch('/api/data?_t=' + Date.now());
                 const data = await res.json();
-                favIds = data.favorites.map(m => m.id);
+                favIds = (data.favorites || []).map(m => m.id);
                 document.getElementById('statCount').innerText = data.count;
                 document.getElementById('tabCount').innerText = data.count;
                 document.getElementById('statQuota').innerText = '@' + (data.total_quota || 1.0).toFixed(2);
                 currentTotalQuota = data.total_quota || 1.0;
                 aggiornaCalcoloVincita();
+
+                // Aggiorna banner esito
+                const bannerContainer = document.getElementById('outcomeBannerContainer');
+                if (bannerContainer) {{
+                    if (data.count === 0) bannerContainer.innerHTML = '';
+                    else if (data.esito_complessivo === 'WIN') {{
+                        bannerContainer.innerHTML = '<div class="outcome-banner win">🎉 SCHEDINA VINCENTE! • Tutti gli esiti sono stati centrati!</div>';
+                    }} else if (data.esito_complessivo === 'LOST') {{
+                        bannerContainer.innerHTML = '<div class="outcome-banner lost">❌ SCHEDINA NON RIUSCITA • Uno o più pronostici non centrati</div>';
+                    }} else if (data.esito_complessivo === 'LIVE') {{
+                        bannerContainer.innerHTML = '<div class="outcome-banner live">🟡 VERIFICA IN CORSO • Partite in svolgimento LIVE</div>';
+                    }} else {{
+                        bannerContainer.innerHTML = '<div class="outcome-banner pending">⏳ VERIFICA ATTIVA • In attesa della conclusione degli eventi</div>';
+                    }}
+                }}
             }} catch (e) {{}}
         }}
 
@@ -1879,6 +2452,7 @@ def render_mobile_html():
                 if (data.status === 'ok') {{
                     showToast('✓ Partita analizzata e aggiunta alla Schedina!');
                     input.value = '';
+                    salvaBackupLocale();
                     setTimeout(() => location.reload(), 600);
                 }} else {{
                     showToast('Errore: ' + (data.message || 'Non trovata'));
@@ -1887,6 +2461,11 @@ def render_mobile_html():
                 showToast('Errore di connessione');
             }}
         }}
+
+        // Sincronizza local storage all'avvio in background
+        window.addEventListener('DOMContentLoaded', () => {{
+            sincronizzaConLocalStorage();
+        }});
     </script>
 </body>
 </html>'''
