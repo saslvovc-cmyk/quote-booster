@@ -39,8 +39,9 @@ SEP1 = chr(172)
 SEP2 = chr(247)
 FS_HEADERS = {
     'X-Fsign': 'SW9D1eZo',
-    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-    'Referer': 'https://www.flashscore.com/',
+    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+    'Referer': 'https://www.flashscore.it/',
+    'Origin': 'https://www.flashscore.it'
 }
 
 # =====================================================================
@@ -1282,11 +1283,11 @@ def elabora_algoritmo(m):
     m["esito_testo"] = testo
     m["esito_css"] = css_cls
 
-def get_palinsesto(force=False):
-    global cached_palinsesto, last_palinsesto_time
-    now = time.time()
-    if not force and cached_palinsesto and (now - last_palinsesto_time < 90):
-        return cached_palinsesto
+_palinsesto_updating = False
+
+def _update_palinsesto_worker():
+    global cached_palinsesto, last_palinsesto_time, _palinsesto_updating
+    _palinsesto_updating = True
     try:
         fb = FlashscorePalinsestoService.fetch_all_today(sport_id=1, day_offset=0)
         tn = FlashscorePalinsestoService.fetch_all_today(sport_id=2, day_offset=0)
@@ -1295,42 +1296,63 @@ def get_palinsesto(force=False):
             sk = m.get("league_sort_key", (5, 9999, 9999))
             return sk[0] if isinstance(sk, (tuple, list)) else 5
 
-        # Ordinamento Palinsesto:
-        # 1. Calcio Europeo (Tiers 1, 2, 3, 4, 5) - SEMPRE E ASSOLUTAMENTE IN CIMA ALLA LISTA!
-        #    Tier 1: Top 5 Europei 1a Div (Serie A, Premier, LaLiga, Bundesliga, Ligue 1) + Coppe UEFA
-        #    Tier 2: Top 5 Europei 2a Div (Serie B, Championship, LaLiga2, 2. Bundesliga, Ligue 2)
-        #    Tier 3: Altri campionati Europei 1a Div (Eredivisie, Liga Portugal, Super Lig, ecc.)
-        #    Tier 4: Altri campionati Europei 2a Div (Eerste Divisie, ecc.)
-        #    Tier 5: Coppe Nazionali Europee
-        # 2. Tennis Singolari (Tiers 1, 2, 3, 4)
-        # 3. Calcio Resto del Mondo (Tiers 6, 7, 8) - IN SEGUITO
         fb_europe = [m for m in fb if tier(m) <= 5]
         fb_world = [m for m in fb if tier(m) > 5]
-
         all_sorted = fb_europe + tn + fb_world
 
-        # Prefetch parallelo velocissimo di tutti i match con quote (H2H Flashscore Live)
+        # Prefetch parallelo rapido solo dei primi 15 match top europei con quote (leggero su cloud)
         with_odds = [m for m in all_sorted if m.get("odds") and m.get("id")]
         from concurrent.futures import ThreadPoolExecutor
         def _pre_fetch(m):
-            sp_id = 1 if m.get("sport") == "Calcio" else 2
-            get_forma_live(sp_id, m["id"], m.get("home", ""), m.get("away", ""))
-        with ThreadPoolExecutor(max_workers=20) as ex:
-            list(ex.map(_pre_fetch, with_odds))
+            try:
+                sp_id = 1 if m.get("sport") == "Calcio" else 2
+                get_forma_live(sp_id, m["id"], m.get("home", ""), m.get("away", ""))
+            except Exception:
+                pass
+        with ThreadPoolExecutor(max_workers=6) as ex:
+            list(ex.map(_pre_fetch, with_odds[:15]))
 
-        # Pre-calcola algoritmo sui match con quote per visione immediata da smartphone!
+        # Elabora algoritmo sui match con quote
         for m in with_odds:
-            elabora_algoritmo(m)
+            try:
+                elabora_algoritmo(m)
+            except Exception:
+                pass
 
-        cached_palinsesto = all_sorted
-        last_palinsesto_time = now
-    except Exception:
-        pass
+        if all_sorted:
+            cached_palinsesto = all_sorted
+            last_palinsesto_time = time.time()
+    except Exception as e:
+        print("Errore aggiornamento palinsesto:", e)
+    finally:
+        _palinsesto_updating = False
+
+def get_palinsesto(force=False):
+    global cached_palinsesto, last_palinsesto_time, _palinsesto_updating
+    now = time.time()
+    if cached_palinsesto and (now - last_palinsesto_time < 90) and not force:
+        return cached_palinsesto
+
+    if not cached_palinsesto:
+        if not _palinsesto_updating:
+            _update_palinsesto_worker()
+        else:
+            t_end = time.time() + 4
+            while time.time() < t_end and not cached_palinsesto:
+                time.sleep(0.2)
+    elif force:
+        _update_palinsesto_worker()
+    else:
+        if not _palinsesto_updating:
+            threading.Thread(target=_update_palinsesto_worker, daemon=True).start()
+
     return cached_palinsesto
-# Precarica
+# Precarica e avvio warm-up palinsesto in background
 load_saved_favorites()
 for m in favorites.values():
     elabora_algoritmo(m)
+
+threading.Thread(target=_update_palinsesto_worker, daemon=True).start()
 
 # =====================================================================
 #  ROTTE API E INTERFACCIA WEB (CON HEADER ZERO-CACHE)
@@ -1583,6 +1605,14 @@ def api_schedine_sync():
         "schedine": schedine_store,
         "schedine_list": list(schedine_store.keys()),
         "count": len(favorites)
+    })
+
+@app.route("/api/schedine/export_all")
+def api_schedine_export_all():
+    load_schedine_data()
+    return jsonify({
+        "schedine": schedine_store,
+        "active": active_schedina_name
     })
 
 @app.route("/api/schedine/save", methods=["POST"])
@@ -2309,6 +2339,8 @@ def render_mobile_html():
         </select>
         <button class="btn-mini" onclick="creaNuovaSchedina()">➕ Nuova</button>
         <button class="btn-mini" onclick="salvaSchedinaConNome()">💾 Salva con nome</button>
+        <button class="btn-mini" style="color:var(--green);" onclick="esportaCodiceSchedine()" title="Copia tutte le schedine negli appunti per trasferirle su Render o PC">📤 Esporta</button>
+        <button class="btn-mini" style="color:var(--acc);" onclick="importaCodiceSchedine()" title="Incolla le schedine copiate dall'altra app">📥 Importa</button>
         <button class="btn-mini" style="color:var(--red);" onclick="eliminaSchedinaCorrente()">🗑️ Elimina</button>
     </div>
 
@@ -2769,6 +2801,45 @@ def render_mobile_html():
                 }}
             }} catch (err) {{
                 showToast('Errore eliminazione schedina');
+            }}
+        }}
+
+        async function esportaCodiceSchedine() {{
+            try {{
+                const res = await fetch('/api/schedine/export_all?_t=' + Date.now());
+                const allData = await res.json();
+                const code = btoa(unescape(encodeURIComponent(JSON.stringify(allData))));
+                try {{
+                    await navigator.clipboard.writeText(code);
+                    showToast('✓ Schedine copiate negli appunti! Ora apri Render e tocca 📥 Importa');
+                }} catch (e) {{
+                    prompt('Copia questo codice per trasferire le schedine:', code);
+                }}
+            }} catch (err) {{
+                showToast('Errore durante esportazione');
+            }}
+        }}
+
+        async function importaCodiceSchedine() {{
+            const code = prompt('Incolla qui il codice schedine copiato dal PC o dall\'altra app:');
+            if (!code || !code.trim()) return;
+            try {{
+                const jsonStr = decodeURIComponent(escape(atob(code.trim())));
+                const parsed = JSON.parse(jsonStr);
+                const res = await fetch('/api/schedine/sync?_t=' + Date.now(), {{
+                    method: 'POST',
+                    headers: {{ 'Content-Type': 'application/json' }},
+                    body: JSON.stringify(parsed)
+                }});
+                const d = await res.json();
+                if (d.status === 'ok') {{
+                    showToast('✓ Tutte le schedine sincronizzate con successo!');
+                    setTimeout(() => location.reload(), 400);
+                }} else {{
+                    showToast('Errore sincronizzazione');
+                }}
+            }} catch (err) {{
+                alert('Codice schedine non valido. Assicurati di aver copiato tutto il codice.');
             }}
         }}
 

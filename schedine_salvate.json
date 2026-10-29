@@ -1,0 +1,1394 @@
+{
+  "active": "Schedina Test Sabato",
+  "schedine": {
+    "Schedina Principale": {
+      "MwxmYTFj": {
+        "id": "MwxmYTFj",
+        "sport": "Calcio",
+        "league": "ITALY: Serie A",
+        "league_sort_key": [
+          1,
+          10,
+          74
+        ],
+        "feed_order": 120,
+        "is_top": true,
+        "home": "AC Milan",
+        "away": "Bologna",
+        "time": "18:30",
+        "timestamp": 1793208600,
+        "status_code": "3",
+        "score": "2 : 4",
+        "odds": [
+          1.67,
+          3.6,
+          5.5
+        ],
+        "odds_str": "1.67 / 3.60 / 5.50",
+        "livello": "dim",
+        "raw_pick": "1X",
+        "pick_str": "🚨 1X (41.4%)",
+        "pick_title": "DOPPIA CHANCE 1X (Copertura prudenziale)",
+        "summary_lines": [
+          "• 690 precedenti storici con pattern quote simile",
+          "• Equilibrio statistico: convergenza non netta sul solo esito pieno. Forma Ultime 5: AC Milan (S-V-S-V-V, 9pt | Casa: 3V-0N-2P) • Bologna (V-V-S-V-P, 10pt | Trasf: 3V-0N-2P) • H2H 5 match: 3V AC Milan, 0N, 2V Bologna.",
+          "• 1: 58.6% | X: 23.9% | 2: 17.5%",
+          "• Rottura Favorito (X o Ribaltone): 41.4%",
+          "• 📈 Forma Ultime 5: AC Milan (S-V-S-V-V, 9pt | Casa: 3V-0N-2P) • Bologna (V-V-S-V-P, 10pt | Trasf: 3V-0N-2P) • H2H 5 match: 3V AC Milan, 0N, 2V Bologna"
+        ],
+        "full_report": [
+          "PRONOSTICO STATISTICO: DOPPIA CHANCE 1X (Copertura prudenziale)",
+          "Motivazione: Equilibrio statistico: convergenza non netta sul solo esito pieno. Forma Ultime 5: AC Milan (S-V-S-V-V, 9pt | Casa: 3V-0N-2P) • Bologna (V-V-S-V-P, 10pt | Trasf: 3V-0N-2P) • H2H 5 match: 3V AC Milan, 0N, 2V Bologna.",
+          "Campione: 690 match storici analizzati",
+          "",
+          "DISTRIBUZIONE EFFETTIVA RISCONTRATA:",
+          "• Segno 1: 404 match (58.6%) | Implicita Quota: 56.6% [+2.0%]",
+          "• Segno X: 165 match (23.9%) | Implicita Quota: 26.2% [-2.3%]",
+          "• Segno 2: 121 match (17.5%) | Implicita Quota: 17.2% [+0.4%]",
+          "",
+          "INDICATORE DI ROTTURA DEL FAVORITO: 41.4% delle volte",
+          "",
+          "ULTIMI 5 MATCH STORICI REGISTRATI:",
+          "[2026-09-13] Celta vs Malaga -> Esito: D",
+          "[2026-09-13] Sp Gijon vs Eldense -> Esito: A",
+          "[2026-09-13] Mallorca vs Sabadell -> Esito: H",
+          "[2026-09-15] Alaves vs Valencia -> Esito: A",
+          "[2026-09-20] Modena vs Empoli -> Esito: H"
+        ],
+        "forma_summary": "Forma Ultime 5: AC Milan (S-V-S-V-V, 9pt | Casa: 3V-0N-2P) • Bologna (V-V-S-V-P, 10pt | Trasf: 3V-0N-2P) • H2H 5 match: 3V AC Milan, 0N, 2V Bologna",
+        "effective_quota": 1.14,
+        "esito_stato": "LOST",
+        "esito_testo": "❌ NON PRESO (2-4)",
+        "esito_css": "lost"
+      },
+      "McStfBxA": {
+        "id": "McStfBxA",
+        "sport": "Calcio",
+        "league": "ITALY: Serie A",
+        "league_sort_key": [
+          1,
+          10,
+          74
+        ],
+        "feed_order": 121,
+        "is_top": true,
+        "home": "Parma",
+        "away": "Udinese",
+        "time": "18:30",
+        "timestamp": 1793208600,
+        "status_code": "3",
+        "score": "0 : 0",
+        "odds": [
+          3.0,
+          3.2,
+          2.45
+        ],
+        "odds_str": "3.00 / 3.20 / 2.45",
+        "livello": "dim",
+        "raw_pick": "X2",
+        "pick_str": "🚨 X2 (59.0%)",
+        "pick_title": "DOPPIA CHANCE X2 (Copertura prudenziale)",
+        "summary_lines": [
+          "• 1032 precedenti storici con pattern quote simile",
+          "• Equilibrio statistico: convergenza non netta sul solo esito pieno. Forma Ultime 5: Parma (P-S-S-S-V, 4pt | Casa: 1V-2N-2P) • Udinese (P-S-S-S-P, 2pt | Trasf: 1V-2N-2P) • H2H 5 match: 1V Parma, 1N, 3V Udinese.",
+          "• 1: 31.4% | X: 27.6% | 2: 41.0%",
+          "• Rottura Favorito (X o Ribaltone): 59.0%",
+          "• 📈 Forma Ultime 5: Parma (P-S-S-S-V, 4pt | Casa: 1V-2N-2P) • Udinese (P-S-S-S-P, 2pt | Trasf: 1V-2N-2P) • H2H 5 match: 1V Parma, 1N, 3V Udinese"
+        ],
+        "full_report": [
+          "PRONOSTICO STATISTICO: DOPPIA CHANCE X2 (Copertura prudenziale)",
+          "Motivazione: Equilibrio statistico: convergenza non netta sul solo esito pieno. Forma Ultime 5: Parma (P-S-S-S-V, 4pt | Casa: 1V-2N-2P) • Udinese (P-S-S-S-P, 2pt | Trasf: 1V-2N-2P) • H2H 5 match: 1V Parma, 1N, 3V Udinese.",
+          "Campione: 1032 match storici analizzati",
+          "",
+          "DISTRIBUZIONE EFFETTIVA RISCONTRATA:",
+          "• Segno 1: 324 match (31.4%) | Implicita Quota: 31.6% [-0.2%]",
+          "• Segno X: 285 match (27.6%) | Implicita Quota: 29.6% [-2.0%]",
+          "• Segno 2: 423 match (41.0%) | Implicita Quota: 38.7% [+2.3%]",
+          "",
+          "INDICATORE DI ROTTURA DEL FAVORITO: 59.0% delle volte",
+          "",
+          "ULTIMI 5 MATCH STORICI REGISTRATI:",
+          "[2026-09-17] AFC Wimbledon vs Milton Keynes Dons -> Esito: D",
+          "[2026-09-19] Carrarese vs Benevento -> Esito: A",
+          "[2026-09-19] Eldense vs Eibar -> Esito: A",
+          "[2026-09-20] Parma vs Genoa -> Esito: H",
+          "[2026-09-26] Celta B vs Sabadell -> Esito: D"
+        ],
+        "forma_summary": "Forma Ultime 5: Parma (P-S-S-S-V, 4pt | Casa: 1V-2N-2P) • Udinese (P-S-S-S-P, 2pt | Trasf: 1V-2N-2P) • H2H 5 match: 1V Parma, 1N, 3V Udinese",
+        "effective_quota": 1.39,
+        "esito_stato": "WIN",
+        "esito_testo": "✅ PRESO (0-0)",
+        "esito_css": "win"
+      },
+      "QRMD8Ai3": {
+        "id": "QRMD8Ai3",
+        "sport": "Calcio",
+        "league": "ITALY: Serie A",
+        "league_sort_key": [
+          1,
+          10,
+          74
+        ],
+        "feed_order": 122,
+        "is_top": true,
+        "home": "Venezia",
+        "away": "Inter",
+        "time": "18:30",
+        "timestamp": 1793208600,
+        "status_code": "3",
+        "score": "0 : 2",
+        "odds": [
+          7.0,
+          5.0,
+          1.4
+        ],
+        "odds_str": "7.00 / 5.00 / 1.40",
+        "livello": "ok",
+        "raw_pick": "2",
+        "pick_str": "🎯 2 (65.6%)",
+        "pick_title": "SEGNO 2 (Rafforzato da Forma & Rendimento Trasferta: Inter 12pt vs Venezia 3pt) (Vittoria Favorita confermata dai dati)",
+        "summary_lines": [
+          "• 61 precedenti storici con pattern quote simile",
+          "• Il favorito storico converte nel 65.6% dei casi su 61 partite. Forma Ultime 5: Venezia (S-S-V-S-S, 3pt | Casa: 1V-0N-4P) • Inter (V-V-V-V-S, 12pt | Trasf: 3V-1N-1P) • H2H 5 match: 0V Venezia, 0N, 5V Inter.",
+          "• 1: 18.0% | X: 16.4% | 2: 65.6%",
+          "• Rottura Favorito (X o Ribaltone): 34.4%",
+          "• 📈 Forma Ultime 5: Venezia (S-S-V-S-S, 3pt | Casa: 1V-0N-4P) • Inter (V-V-V-V-S, 12pt | Trasf: 3V-1N-1P) • H2H 5 match: 0V Venezia, 0N, 5V Inter"
+        ],
+        "full_report": [
+          "PRONOSTICO STATISTICO: SEGNO 2 (Rafforzato da Forma & Rendimento Trasferta: Inter 12pt vs Venezia 3pt) (Vittoria Favorita confermata dai dati)",
+          "Motivazione: Il favorito storico converte nel 65.6% dei casi su 61 partite. Forma Ultime 5: Venezia (S-S-V-S-S, 3pt | Casa: 1V-0N-4P) • Inter (V-V-V-V-S, 12pt | Trasf: 3V-1N-1P) • H2H 5 match: 0V Venezia, 0N, 5V Inter.",
+          "Campione: 61 match storici analizzati",
+          "",
+          "DISTRIBUZIONE EFFETTIVA RISCONTRATA:",
+          "• Segno 1: 11 match (18.0%) | Implicita Quota: 13.5% [+4.5%]",
+          "• Segno X: 10 match (16.4%) | Implicita Quota: 18.9% [-2.5%]",
+          "• Segno 2: 40 match (65.6%) | Implicita Quota: 67.6% [-2.0%]",
+          "",
+          "INDICATORE DI ROTTURA DEL FAVORITO: 34.4% delle volte",
+          "",
+          "ULTIMI 5 MATCH STORICI REGISTRATI:",
+          "[2026-05-21] Mechelen vs Club Brugge -> Esito: D",
+          "[2026-08-09] Kilmarnock vs Celtic -> Esito: A",
+          "[2026-08-15] Genclerbirligi vs Fenerbahce -> Esito: H",
+          "[2026-09-04] Betis vs Real Madrid -> Esito: H",
+          "[2026-09-20] Marseille vs Paris SG -> Esito: A"
+        ],
+        "forma_summary": "Forma Ultime 5: Venezia (S-S-V-S-S, 3pt | Casa: 1V-0N-4P) • Inter (V-V-V-V-S, 12pt | Trasf: 3V-1N-1P) • H2H 5 match: 0V Venezia, 0N, 5V Inter",
+        "effective_quota": 1.4,
+        "esito_stato": "WIN",
+        "esito_testo": "✅ PRESO (0-2)",
+        "esito_css": "win"
+      },
+      "I7AFjxWH": {
+        "id": "I7AFjxWH",
+        "sport": "Calcio",
+        "league": "ITALY: Serie A",
+        "league_sort_key": [
+          1,
+          10,
+          74
+        ],
+        "feed_order": 123,
+        "is_top": true,
+        "home": "Genoa",
+        "away": "Juventus",
+        "time": "20:45",
+        "timestamp": 1793216700,
+        "status_code": "2",
+        "score": "2 : 0",
+        "odds": [
+          5.75,
+          3.5,
+          1.67
+        ],
+        "odds_str": "5.75 / 3.50 / 1.67",
+        "livello": "warn",
+        "raw_pick": "X",
+        "pick_str": "⚠️ X (31.6%)",
+        "pick_title": "SEGNO X (Alta densità di pareggio nel pattern)",
+        "summary_lines": [
+          "• 57 precedenti storici con pattern quote simile",
+          "• Il pareggio si manifesta al 31.6%, molto sopra la media standard. Forma Ultime 5: Genoa (V-S-V-S-S, 6pt | Casa: 3V-1N-1P) • Juventus (V-P-S-V-P, 8pt | Trasf: 3V-1N-1P) • H2H 5 match: 0V Genoa, 1N, 4V Juventus.",
+          "• 1: 10.5% | X: 31.6% | 2: 57.9%",
+          "• Rottura Favorito (X o Ribaltone): 42.1%",
+          "• 📈 Forma Ultime 5: Genoa (V-S-V-S-S, 6pt | Casa: 3V-1N-1P) • Juventus (V-P-S-V-P, 8pt | Trasf: 3V-1N-1P) • H2H 5 match: 0V Genoa, 1N, 4V Juventus"
+        ],
+        "full_report": [
+          "PRONOSTICO STATISTICO: SEGNO X (Alta densità di pareggio nel pattern)",
+          "Motivazione: Il pareggio si manifesta al 31.6%, molto sopra la media standard. Forma Ultime 5: Genoa (V-S-V-S-S, 6pt | Casa: 3V-1N-1P) • Juventus (V-P-S-V-P, 8pt | Trasf: 3V-1N-1P) • H2H 5 match: 0V Genoa, 1N, 4V Juventus.",
+          "Campione: 57 match storici analizzati",
+          "",
+          "DISTRIBUZIONE EFFETTIVA RISCONTRATA:",
+          "• Segno 1: 6 match (10.5%) | Implicita Quota: 16.4% [-5.9%]",
+          "• Segno X: 18 match (31.6%) | Implicita Quota: 27.0% [+4.6%]",
+          "• Segno 2: 33 match (57.9%) | Implicita Quota: 56.6% [+1.3%]",
+          "",
+          "INDICATORE DI ROTTURA DEL FAVORITO: 42.1% delle volte",
+          "",
+          "ULTIMI 5 MATCH STORICI REGISTRATI:",
+          "[2026-02-28] Oviedo vs Ath Madrid -> Esito: A",
+          "[2026-03-02] Gil Vicente vs Benfica -> Esito: A",
+          "[2026-03-14] Panserraikos vs Aris -> Esito: D",
+          "[2026-03-17] Reggiana vs Monza -> Esito: D",
+          "[2026-04-06] Cheltenham vs Cambridge -> Esito: D"
+        ],
+        "forma_summary": "Forma Ultime 5: Genoa (V-S-V-S-S, 6pt | Casa: 3V-1N-1P) • Juventus (V-P-S-V-P, 8pt | Trasf: 3V-1N-1P) • H2H 5 match: 0V Genoa, 1N, 4V Juventus",
+        "effective_quota": 3.5,
+        "esito_stato": "LIVE",
+        "esito_testo": "🟡 SVANTAGGIO (2-0)",
+        "esito_css": "live"
+      },
+      "EXOYeX7c": {
+        "id": "EXOYeX7c",
+        "sport": "Calcio",
+        "league": "ITALY: Serie A",
+        "league_sort_key": [
+          1,
+          10,
+          74
+        ],
+        "feed_order": 124,
+        "is_top": true,
+        "home": "Monza",
+        "away": "Napoli",
+        "time": "20:45",
+        "timestamp": 1793216700,
+        "status_code": "2",
+        "score": "1 : 2",
+        "odds": [
+          5.5,
+          4.33,
+          1.57
+        ],
+        "odds_str": "5.50 / 4.33 / 1.57",
+        "livello": "dim",
+        "raw_pick": "X2",
+        "pick_str": "🚨 X2 (39.5%)",
+        "pick_title": "DOPPIA CHANCE X2 (Copertura prudenziale)",
+        "summary_lines": [
+          "• 210 precedenti storici con pattern quote simile",
+          "• Equilibrio statistico: convergenza non netta sul solo esito pieno. Forma Ultime 5: Monza (S-V-S-P-S, 4pt | Casa: 3V-0N-2P) • Napoli (P-V-S-S-V, 7pt | Trasf: 1V-1N-3P) • H2H 5 match: 1V Monza, 1N, 3V Napoli.",
+          "• 1: 18.6% | X: 21.0% | 2: 60.5%",
+          "• Rottura Favorito (X o Ribaltone): 39.5%",
+          "• 📈 Forma Ultime 5: Monza (S-V-S-P-S, 4pt | Casa: 3V-0N-2P) • Napoli (P-V-S-S-V, 7pt | Trasf: 1V-1N-3P) • H2H 5 match: 1V Monza, 1N, 3V Napoli"
+        ],
+        "full_report": [
+          "PRONOSTICO STATISTICO: DOPPIA CHANCE X2 (Copertura prudenziale)",
+          "Motivazione: Equilibrio statistico: convergenza non netta sul solo esito pieno. Forma Ultime 5: Monza (S-V-S-P-S, 4pt | Casa: 3V-0N-2P) • Napoli (P-V-S-S-V, 7pt | Trasf: 1V-1N-3P) • H2H 5 match: 1V Monza, 1N, 3V Napoli.",
+          "Campione: 210 match storici analizzati",
+          "",
+          "DISTRIBUZIONE EFFETTIVA RISCONTRATA:",
+          "• Segno 1: 39 match (18.6%) | Implicita Quota: 17.3% [+1.3%]",
+          "• Segno X: 44 match (21.0%) | Implicita Quota: 22.0% [-1.0%]",
+          "• Segno 2: 127 match (60.5%) | Implicita Quota: 60.7% [-0.2%]",
+          "",
+          "INDICATORE DI ROTTURA DEL FAVORITO: 39.5% delle volte",
+          "",
+          "ULTIMI 5 MATCH STORICI REGISTRATI:",
+          "[2026-05-24] Cremonese vs Como -> Esito: A",
+          "[2026-07-31] Dundee United vs Rangers -> Esito: D",
+          "[2026-08-15] Excelsior vs PSV Eindhoven -> Esito: A",
+          "[2026-08-22] For Sittard vs AZ Alkmaar -> Esito: A",
+          "[2026-10-03] Gateshead vs Worthing -> Esito: A"
+        ],
+        "forma_summary": "Forma Ultime 5: Monza (S-V-S-P-S, 4pt | Casa: 3V-0N-2P) • Napoli (P-V-S-S-V, 7pt | Trasf: 1V-1N-3P) • H2H 5 match: 1V Monza, 1N, 3V Napoli",
+        "effective_quota": 1.15,
+        "esito_stato": "LIVE",
+        "esito_testo": "🟡 VANTAGGIO (1-2)",
+        "esito_css": "live"
+      },
+      "EJDd9P4m": {
+        "id": "EJDd9P4m",
+        "sport": "Calcio",
+        "league": "ITALY: Serie B",
+        "league_sort_key": [
+          2,
+          1,
+          75
+        ],
+        "feed_order": 125,
+        "is_top": false,
+        "home": "Pisa",
+        "away": "Palermo",
+        "time": "19:00",
+        "timestamp": 1793210400,
+        "status_code": "3",
+        "score": "3 : 3",
+        "odds": [
+          2.25,
+          3.3,
+          3.0
+        ],
+        "odds_str": "2.25 / 3.30 / 3.00",
+        "livello": "warn",
+        "raw_pick": "X2",
+        "pick_str": "⚠️ X2 (60.5%)",
+        "pick_title": "DOPPIA CHANCE X2 (Trappola Favorito - Frequenza Pareggi/Rottura anomala)",
+        "summary_lines": [
+          "• 1435 precedenti storici con pattern quote simile",
+          "• La favorita nominale fallisce nel 60.5% dei casi (Pareggio reale: 30.7%). Forma Ultime 5: Pisa (P-P-V-V-S, 8pt | Casa: 2V-1N-2P) • Palermo (P-V-V-V-V, 13pt | Trasf: 3V-2N-0P) • H2H 5 match: 3V Pisa, 1N, 1V Palermo.",
+          "• 1: 39.5% | X: 30.7% | 2: 29.8%",
+          "• Rottura Favorito (X o Ribaltone): 60.5%",
+          "• 📈 Forma Ultime 5: Pisa (P-P-V-V-S, 8pt | Casa: 2V-1N-2P) • Palermo (P-V-V-V-V, 13pt | Trasf: 3V-2N-0P) • H2H 5 match: 3V Pisa, 1N, 1V Palermo"
+        ],
+        "full_report": [
+          "PRONOSTICO STATISTICO: DOPPIA CHANCE X2 (Trappola Favorito - Frequenza Pareggi/Rottura anomala)",
+          "Motivazione: La favorita nominale fallisce nel 60.5% dei casi (Pareggio reale: 30.7%). Forma Ultime 5: Pisa (P-P-V-V-S, 8pt | Casa: 2V-1N-2P) • Palermo (P-V-V-V-V, 13pt | Trasf: 3V-2N-0P) • H2H 5 match: 3V Pisa, 1N, 1V Palermo.",
+          "Campione: 1435 match storici analizzati",
+          "",
+          "DISTRIBUZIONE EFFETTIVA RISCONTRATA:",
+          "• Segno 1: 567 match (39.5%) | Implicita Quota: 41.1% [-1.6%]",
+          "• Segno X: 440 match (30.7%) | Implicita Quota: 28.0% [+2.6%]",
+          "• Segno 2: 428 match (29.8%) | Implicita Quota: 30.8% [-1.0%]",
+          "",
+          "INDICATORE DI ROTTURA DEL FAVORITO: 60.5% delle volte",
+          "",
+          "ULTIMI 5 MATCH STORICI REGISTRATI:",
+          "[2026-09-26] Ceuta vs Sociedad B -> Esito: H",
+          "[2026-09-26] Swindon vs Accrington -> Esito: D",
+          "[2026-10-03] Reading vs Bradford -> Esito: D",
+          "[2026-10-03] Accrington vs Cheltenham -> Esito: H",
+          "[2026-10-04] Girona vs Mallorca -> Esito: D"
+        ],
+        "forma_summary": "Forma Ultime 5: Pisa (P-P-V-V-S, 8pt | Casa: 2V-1N-2P) • Palermo (P-V-V-V-V, 13pt | Trasf: 3V-2N-0P) • H2H 5 match: 3V Pisa, 1N, 1V Palermo",
+        "effective_quota": 1.57,
+        "esito_stato": "WIN",
+        "esito_testo": "✅ PRESO (3-3)",
+        "esito_css": "win"
+      },
+      "tGx0v55D": {
+        "id": "tGx0v55D",
+        "sport": "Calcio",
+        "league": "ITALY: Serie B",
+        "league_sort_key": [
+          2,
+          1,
+          75
+        ],
+        "feed_order": 126,
+        "is_top": false,
+        "home": "Carrarese",
+        "away": "Arezzo",
+        "time": "20:00",
+        "timestamp": 1793214000,
+        "status_code": "3",
+        "score": "2 : 1",
+        "odds": [
+          1.8,
+          3.4,
+          4.5
+        ],
+        "odds_str": "1.80 / 3.40 / 4.50",
+        "livello": "dim",
+        "raw_pick": "1X",
+        "pick_str": "🚨 1X (46.5%)",
+        "pick_title": "DOPPIA CHANCE 1X (Copertura prudenziale)",
+        "summary_lines": [
+          "• 1367 precedenti storici con pattern quote simile",
+          "• Equilibrio statistico: convergenza non netta sul solo esito pieno. Forma Ultime 5: Carrarese (V-S-V-V-S, 9pt | Casa: 2V-0N-3P) • Arezzo (S-S-V-P-S, 4pt | Trasf: 2V-0N-3P) • H2H 5 match: 3V Carrarese, 1N, 1V Arezzo.",
+          "• 1: 53.5% | X: 26.6% | 2: 19.8%",
+          "• Rottura Favorito (X o Ribaltone): 46.5%",
+          "• 📈 Forma Ultime 5: Carrarese (V-S-V-V-S, 9pt | Casa: 2V-0N-3P) • Arezzo (S-S-V-P-S, 4pt | Trasf: 2V-0N-3P) • H2H 5 match: 3V Carrarese, 1N, 1V Arezzo"
+        ],
+        "full_report": [
+          "PRONOSTICO STATISTICO: DOPPIA CHANCE 1X (Copertura prudenziale)",
+          "Motivazione: Equilibrio statistico: convergenza non netta sul solo esito pieno. Forma Ultime 5: Carrarese (V-S-V-V-S, 9pt | Casa: 2V-0N-3P) • Arezzo (S-S-V-P-S, 4pt | Trasf: 2V-0N-3P) • H2H 5 match: 3V Carrarese, 1N, 1V Arezzo.",
+          "Campione: 1367 match storici analizzati",
+          "",
+          "DISTRIBUZIONE EFFETTIVA RISCONTRATA:",
+          "• Segno 1: 732 match (53.5%) | Implicita Quota: 51.8% [+1.7%]",
+          "• Segno X: 364 match (26.6%) | Implicita Quota: 27.4% [-0.8%]",
+          "• Segno 2: 271 match (19.8%) | Implicita Quota: 20.7% [-0.9%]",
+          "",
+          "INDICATORE DI ROTTURA DEL FAVORITO: 46.5% delle volte",
+          "",
+          "ULTIMI 5 MATCH STORICI REGISTRATI:",
+          "[2026-09-19] Cremonese vs Virtus Entella -> Esito: D",
+          "[2026-09-19] Burnley vs Derby -> Esito: D",
+          "[2026-09-20] Verona vs Vicenza -> Esito: H",
+          "[2026-09-20] Estoril vs Casa Pia -> Esito: A",
+          "[2026-09-26] Cambridge vs AFC Wimbledon -> Esito: D"
+        ],
+        "forma_summary": "Forma Ultime 5: Carrarese (V-S-V-V-S, 9pt | Casa: 2V-0N-3P) • Arezzo (S-S-V-P-S, 4pt | Trasf: 2V-0N-3P) • H2H 5 match: 3V Carrarese, 1N, 1V Arezzo",
+        "effective_quota": 1.18,
+        "esito_stato": "WIN",
+        "esito_testo": "✅ PRESO (2-1)",
+        "esito_css": "win"
+      },
+      "4hGHdnLs": {
+        "id": "4hGHdnLs",
+        "sport": "Calcio",
+        "league": "ITALY: Serie B",
+        "league_sort_key": [
+          2,
+          1,
+          75
+        ],
+        "feed_order": 127,
+        "is_top": false,
+        "home": "Juve Stabia",
+        "away": "Verona",
+        "time": "20:00",
+        "timestamp": 1793214000,
+        "status_code": "3",
+        "score": "0 : 1",
+        "odds": [
+          3.1,
+          3.2,
+          2.25
+        ],
+        "odds_str": "3.10 / 3.20 / 2.25",
+        "livello": "dim",
+        "raw_pick": "X2",
+        "pick_str": "🚨 X2 (57.7%)",
+        "pick_title": "DOPPIA CHANCE X2 (Copertura prudenziale)",
+        "summary_lines": [
+          "• 989 precedenti storici con pattern quote simile",
+          "• Equilibrio statistico: convergenza non netta sul solo esito pieno. Forma Ultime 5: Juve Stabia (S-V-V-P-P, 8pt | Casa: 2V-1N-2P) • Verona (V-P-P-S-V, 8pt | Trasf: 3V-0N-2P) • H2H 5 match: 0V Juve Stabia, 0N, 5V Verona.",
+          "• 1: 30.0% | X: 27.7% | 2: 42.3%",
+          "• Rottura Favorito (X o Ribaltone): 57.7%",
+          "• 📈 Forma Ultime 5: Juve Stabia (S-V-V-P-P, 8pt | Casa: 2V-1N-2P) • Verona (V-P-P-S-V, 8pt | Trasf: 3V-0N-2P) • H2H 5 match: 0V Juve Stabia, 0N, 5V Verona"
+        ],
+        "full_report": [
+          "PRONOSTICO STATISTICO: DOPPIA CHANCE X2 (Copertura prudenziale)",
+          "Motivazione: Equilibrio statistico: convergenza non netta sul solo esito pieno. Forma Ultime 5: Juve Stabia (S-V-V-P-P, 8pt | Casa: 2V-1N-2P) • Verona (V-P-P-S-V, 8pt | Trasf: 3V-0N-2P) • H2H 5 match: 0V Juve Stabia, 0N, 5V Verona.",
+          "Campione: 989 match storici analizzati",
+          "",
+          "DISTRIBUZIONE EFFETTIVA RISCONTRATA:",
+          "• Segno 1: 297 match (30.0%) | Implicita Quota: 29.9% [+0.1%]",
+          "• Segno X: 274 match (27.7%) | Implicita Quota: 28.9% [-1.2%]",
+          "• Segno 2: 418 match (42.3%) | Implicita Quota: 41.2% [+1.1%]",
+          "",
+          "INDICATORE DI ROTTURA DEL FAVORITO: 57.7% delle volte",
+          "",
+          "ULTIMI 5 MATCH STORICI REGISTRATI:",
+          "[2026-09-17] AFC Wimbledon vs Milton Keynes Dons -> Esito: D",
+          "[2026-09-18] Queens Park vs Ayr -> Esito: A",
+          "[2026-09-19] Eldense vs Eibar -> Esito: A",
+          "[2026-09-20] Parma vs Genoa -> Esito: H",
+          "[2026-09-26] Celta B vs Sabadell -> Esito: D"
+        ],
+        "forma_summary": "Forma Ultime 5: Juve Stabia (S-V-V-P-P, 8pt | Casa: 2V-1N-2P) • Verona (V-P-P-S-V, 8pt | Trasf: 3V-0N-2P) • H2H 5 match: 0V Juve Stabia, 0N, 5V Verona",
+        "effective_quota": 1.32,
+        "esito_stato": "WIN",
+        "esito_testo": "✅ PRESO (0-1)",
+        "esito_css": "win"
+      }
+    },
+    "Martedì281026": {
+      "MwxmYTFj": {
+        "id": "MwxmYTFj",
+        "sport": "Calcio",
+        "league": "ITALY: Serie A",
+        "league_sort_key": [
+          1,
+          10,
+          74
+        ],
+        "feed_order": 120,
+        "is_top": true,
+        "home": "AC Milan",
+        "away": "Bologna",
+        "time": "18:30",
+        "timestamp": 1793208600,
+        "status_code": "3",
+        "score": "2 : 4",
+        "odds": [
+          1.67,
+          3.6,
+          5.5
+        ],
+        "odds_str": "1.67 / 3.60 / 5.50",
+        "livello": "dim",
+        "raw_pick": "1X",
+        "pick_str": "🎯 1X (41.5%)",
+        "pick_title": "DOPPIA CHANCE 1X (Copertura prudenziale)",
+        "summary_lines": [
+          "• 694 precedenti storici con pattern simile",
+          "• Equilibrio statistico: convergenza non netta sul solo esito pieno. • Forma Ultime 5: AC Milan (S-V-S-V-V, 9pt | Casa: 3V-0N-2P) • Bologna (V-V-S-V-P, 10pt | Trasf: 3V-0N-2P) • H2H 5 match: 3V AC Milan, 0N, 2V Bologna",
+          "• 1: 58.5% | X: 23.9% | 2: 17.6%",
+          "• Rottura Favorito (X o Ribaltone): 41.5%",
+          "• 📈 Forma Ultime 5: AC Milan (S-V-S-V-V, 9pt | Casa: 3V-0N-2P) • Bologna (V-V-S-V-P, 10pt | Trasf: 3V-0N-2P) • H2H 5 match: 3V AC Milan, 0N, 2V Bologna"
+        ],
+        "full_report": [
+          [
+            "PRONOSTICO STATISTICO: DOPPIA CHANCE 1X (Copertura prudenziale)",
+            [
+              "big",
+              "dim"
+            ]
+          ],
+          [
+            "Motivazione: Equilibrio statistico: convergenza non netta sul solo esito pieno. • Forma Ultime 5: AC Milan (S-V-S-V-V, 9pt | Casa: 3V-0N-2P) • Bologna (V-V-S-V-P, 10pt | Trasf: 3V-0N-2P) • H2H 5 match: 3V AC Milan, 0N, 2V Bologna",
+            "main"
+          ],
+          [
+            "Campione: 694 match storici analizzati",
+            "dim"
+          ],
+          [
+            "",
+            null
+          ],
+          [
+            "DISTRIBUZIONE EFFETTIVA RISCONTRATA:",
+            "h"
+          ],
+          [
+            "• Segno 1: 406 match (58.5%) | Implicita Quota: 56.6% [+1.9%]",
+            "main"
+          ],
+          [
+            "• Segno X: 166 match (23.9%) | Implicita Quota: 26.2% [-2.3%]",
+            "main"
+          ],
+          [
+            "• Segno 2: 122 match (17.6%) | Implicita Quota: 17.2% [+0.4%]",
+            "main"
+          ],
+          [
+            "",
+            null
+          ],
+          [
+            "INDICATORE DI ROTTURA DEL FAVORITO: 41.5% delle volte",
+            "main"
+          ],
+          [
+            "",
+            null
+          ],
+          [
+            "ULTIMI 5 MATCH STORICI REGISTRATI:",
+            "h"
+          ],
+          [
+            "[2026-09-20] Modena vs Empoli -> Esito: H",
+            "dim"
+          ],
+          [
+            "[2026-10-11] Almeria vs Leganes -> Esito: H",
+            "dim"
+          ],
+          [
+            "[2026-10-13] Burnley vs Charlton -> Esito: D",
+            "dim"
+          ],
+          [
+            "[2026-10-18] Juventus vs Lazio -> Esito: A",
+            "dim"
+          ],
+          [
+            "[2026-10-25] Aris vs Atromitos -> Esito: H",
+            "dim"
+          ]
+        ],
+        "forma_summary": "Forma Ultime 5: AC Milan (S-V-S-V-V, 9pt | Casa: 3V-0N-2P) • Bologna (V-V-S-V-P, 10pt | Trasf: 3V-0N-2P) • H2H 5 match: 3V AC Milan, 0N, 2V Bologna",
+        "effective_quota": 1.14,
+        "esito_stato": "LOST",
+        "esito_testo": "❌ NON PRESO (2-4)",
+        "esito_css": "lost",
+        "status": "FINITA"
+      },
+      "McStfBxA": {
+        "id": "McStfBxA",
+        "sport": "Calcio",
+        "league": "ITALY: Serie A",
+        "league_sort_key": [
+          1,
+          10,
+          74
+        ],
+        "feed_order": 121,
+        "is_top": true,
+        "home": "Parma",
+        "away": "Udinese",
+        "time": "18:30",
+        "timestamp": 1793208600,
+        "status_code": "3",
+        "score": "0 : 0",
+        "odds": [
+          3.0,
+          3.2,
+          2.45
+        ],
+        "odds_str": "3.00 / 3.20 / 2.45",
+        "livello": "dim",
+        "raw_pick": "X2",
+        "pick_str": "🎯 X2 (58.9%)",
+        "pick_title": "DOPPIA CHANCE X2 (Copertura prudenziale)",
+        "summary_lines": [
+          "• 1046 precedenti storici con pattern simile",
+          "• Equilibrio statistico: convergenza non netta sul solo esito pieno. • Forma Ultime 5: Parma (P-S-S-S-V, 4pt | Casa: 1V-2N-2P) • Udinese (P-S-S-S-P, 2pt | Trasf: 1V-2N-2P) • H2H 5 match: 1V Parma, 1N, 3V Udinese",
+          "• 1: 31.1% | X: 27.8% | 2: 41.1%",
+          "• Rottura Favorito (X o Ribaltone): 58.9%",
+          "• 📈 Forma Ultime 5: Parma (P-S-S-S-V, 4pt | Casa: 1V-2N-2P) • Udinese (P-S-S-S-P, 2pt | Trasf: 1V-2N-2P) • H2H 5 match: 1V Parma, 1N, 3V Udinese"
+        ],
+        "full_report": [
+          [
+            "PRONOSTICO STATISTICO: DOPPIA CHANCE X2 (Copertura prudenziale)",
+            [
+              "big",
+              "dim"
+            ]
+          ],
+          [
+            "Motivazione: Equilibrio statistico: convergenza non netta sul solo esito pieno. • Forma Ultime 5: Parma (P-S-S-S-V, 4pt | Casa: 1V-2N-2P) • Udinese (P-S-S-S-P, 2pt | Trasf: 1V-2N-2P) • H2H 5 match: 1V Parma, 1N, 3V Udinese",
+            "main"
+          ],
+          [
+            "Campione: 1046 match storici analizzati",
+            "dim"
+          ],
+          [
+            "",
+            null
+          ],
+          [
+            "DISTRIBUZIONE EFFETTIVA RISCONTRATA:",
+            "h"
+          ],
+          [
+            "• Segno 1: 325 match (31.1%) | Implicita Quota: 31.6% [-0.6%]",
+            "main"
+          ],
+          [
+            "• Segno X: 291 match (27.8%) | Implicita Quota: 29.6% [-1.8%]",
+            "main"
+          ],
+          [
+            "• Segno 2: 430 match (41.1%) | Implicita Quota: 38.7% [+2.4%]",
+            "main"
+          ],
+          [
+            "",
+            null
+          ],
+          [
+            "INDICATORE DI ROTTURA DEL FAVORITO: 58.9% delle volte",
+            "warn"
+          ],
+          [
+            "",
+            null
+          ],
+          [
+            "ULTIMI 5 MATCH STORICI REGISTRATI:",
+            "h"
+          ],
+          [
+            "[2026-10-24] RAAL La Louviere vs Waregem -> Esito: H",
+            "dim"
+          ],
+          [
+            "[2026-10-24] Napoli vs Roma -> Esito: D",
+            "dim"
+          ],
+          [
+            "[2026-10-25] Celta vs Betis -> Esito: D",
+            "dim"
+          ],
+          [
+            "[2026-10-25] Sunderland vs Leeds -> Esito: D",
+            "dim"
+          ],
+          [
+            "[2026-10-25] Angers vs Lorient -> Esito: D",
+            "dim"
+          ]
+        ],
+        "forma_summary": "Forma Ultime 5: Parma (P-S-S-S-V, 4pt | Casa: 1V-2N-2P) • Udinese (P-S-S-S-P, 2pt | Trasf: 1V-2N-2P) • H2H 5 match: 1V Parma, 1N, 3V Udinese",
+        "effective_quota": 1.39,
+        "esito_stato": "WIN",
+        "esito_testo": "✅ PRESO (0-0)",
+        "esito_css": "win",
+        "status": "FINITA"
+      },
+      "QRMD8Ai3": {
+        "id": "QRMD8Ai3",
+        "sport": "Calcio",
+        "league": "ITALY: Serie A",
+        "league_sort_key": [
+          1,
+          10,
+          74
+        ],
+        "feed_order": 122,
+        "is_top": true,
+        "home": "Venezia",
+        "away": "Inter",
+        "time": "18:30",
+        "timestamp": 1793208600,
+        "status_code": "3",
+        "score": "0 : 2",
+        "odds": [
+          7.0,
+          5.0,
+          1.4
+        ],
+        "odds_str": "7.00 / 5.00 / 1.40",
+        "livello": "ok",
+        "raw_pick": "2",
+        "pick_str": "🎯 2 (65.6%)",
+        "pick_title": "SEGNO 2 (Vittoria Favorita confermata dai dati)",
+        "summary_lines": [
+          "• 61 precedenti storici con pattern simile",
+          "• Il favorito storico converte nel 65.6% dei casi su 61 partite. [Confermato dalla forma: Forma Ultime 5: Venezia (S-S-V-S-S, 3pt | Casa: 1V-0N-4P) • Inter (V-V-V-V-S, 12pt | Trasf: 3V-1N-1P) • H2H 5 match: 0V Venezia, 0N, 5V Inter]",
+          "• 1: 18.0% | X: 16.4% | 2: 65.6%",
+          "• Rottura Favorito (X o Ribaltone): 34.4%",
+          "• 📈 Forma Ultime 5: Venezia (S-S-V-S-S, 3pt | Casa: 1V-0N-4P) • Inter (V-V-V-V-S, 12pt | Trasf: 3V-1N-1P) • H2H 5 match: 0V Venezia, 0N, 5V Inter"
+        ],
+        "full_report": [
+          [
+            "PRONOSTICO STATISTICO: SEGNO 2 (Vittoria Favorita confermata dai dati)",
+            [
+              "big",
+              "ok"
+            ]
+          ],
+          [
+            "Motivazione: Il favorito storico converte nel 65.6% dei casi su 61 partite. [Confermato dalla forma: Forma Ultime 5: Venezia (S-S-V-S-S, 3pt | Casa: 1V-0N-4P) • Inter (V-V-V-V-S, 12pt | Trasf: 3V-1N-1P) • H2H 5 match: 0V Venezia, 0N, 5V Inter]",
+            "main"
+          ],
+          [
+            "Campione: 61 match storici analizzati",
+            "dim"
+          ],
+          [
+            "",
+            null
+          ],
+          [
+            "DISTRIBUZIONE EFFETTIVA RISCONTRATA:",
+            "h"
+          ],
+          [
+            "• Segno 1: 11 match (18.0%) | Implicita Quota: 13.5% [+4.5%]",
+            "main"
+          ],
+          [
+            "• Segno X: 10 match (16.4%) | Implicita Quota: 18.9% [-2.5%]",
+            "main"
+          ],
+          [
+            "• Segno 2: 40 match (65.6%) | Implicita Quota: 67.6% [-2.0%]",
+            "main"
+          ],
+          [
+            "",
+            null
+          ],
+          [
+            "INDICATORE DI ROTTURA DEL FAVORITO: 34.4% delle volte",
+            "main"
+          ],
+          [
+            "",
+            null
+          ],
+          [
+            "ULTIMI 5 MATCH STORICI REGISTRATI:",
+            "h"
+          ],
+          [
+            "[2026-05-21] Mechelen vs Club Brugge -> Esito: D",
+            "dim"
+          ],
+          [
+            "[2026-08-09] Kilmarnock vs Celtic -> Esito: A",
+            "dim"
+          ],
+          [
+            "[2026-08-15] Genclerbirligi vs Fenerbahce -> Esito: H",
+            "dim"
+          ],
+          [
+            "[2026-09-04] Betis vs Real Madrid -> Esito: H",
+            "dim"
+          ],
+          [
+            "[2026-09-20] Marseille vs Paris SG -> Esito: A",
+            "dim"
+          ]
+        ],
+        "forma_summary": "Forma Ultime 5: Venezia (S-S-V-S-S, 3pt | Casa: 1V-0N-4P) • Inter (V-V-V-V-S, 12pt | Trasf: 3V-1N-1P) • H2H 5 match: 0V Venezia, 0N, 5V Inter",
+        "effective_quota": 1.4,
+        "esito_stato": "WIN",
+        "esito_testo": "✅ PRESO (0-2)",
+        "esito_css": "win",
+        "status": "FINITA"
+      },
+      "I7AFjxWH": {
+        "id": "I7AFjxWH",
+        "sport": "Calcio",
+        "league": "ITALY: Serie A",
+        "league_sort_key": [
+          1,
+          10,
+          74
+        ],
+        "feed_order": 123,
+        "is_top": true,
+        "home": "Genoa",
+        "away": "Juventus",
+        "time": "20:45",
+        "timestamp": 1793216700,
+        "status_code": "3",
+        "score": "2 : 0",
+        "odds": [
+          5.75,
+          3.5,
+          1.67
+        ],
+        "odds_str": "5.75 / 3.50 / 1.67",
+        "livello": "warn",
+        "raw_pick": "X",
+        "pick_str": "🎯 X (31.0%)",
+        "pick_title": "SEGNO X (Alta densità di pareggio nel pattern)",
+        "summary_lines": [
+          "• 58 precedenti storici con pattern simile",
+          "• Il pareggio si manifesta al 31.0%, molto sopra la media standard. • Forma Ultime 5: Genoa (V-V-S-V-S, 9pt | Casa: 4V-1N-0P) • Juventus (S-V-P-S-V, 7pt | Trasf: 2V-1N-2P) • H2H 5 match: 1V Genoa, 0N, 4V Juventus",
+          "• 1: 10.3% | X: 31.0% | 2: 58.6%",
+          "• Rottura Favorito (X o Ribaltone): 41.4%",
+          "• 📈 Forma Ultime 5: Genoa (V-V-S-V-S, 9pt | Casa: 4V-1N-0P) • Juventus (S-V-P-S-V, 7pt | Trasf: 2V-1N-2P) • H2H 5 match: 1V Genoa, 0N, 4V Juventus"
+        ],
+        "full_report": [
+          [
+            "PRONOSTICO STATISTICO: SEGNO X (Alta densità di pareggio nel pattern)",
+            [
+              "big",
+              "warn"
+            ]
+          ],
+          [
+            "Motivazione: Il pareggio si manifesta al 31.0%, molto sopra la media standard. • Forma Ultime 5: Genoa (V-V-S-V-S, 9pt | Casa: 4V-1N-0P) • Juventus (S-V-P-S-V, 7pt | Trasf: 2V-1N-2P) • H2H 5 match: 1V Genoa, 0N, 4V Juventus",
+            "main"
+          ],
+          [
+            "Campione: 58 match storici analizzati",
+            "dim"
+          ],
+          [
+            "",
+            null
+          ],
+          [
+            "DISTRIBUZIONE EFFETTIVA RISCONTRATA:",
+            "h"
+          ],
+          [
+            "• Segno 1: 6 match (10.3%) | Implicita Quota: 16.4% [-6.1%]",
+            "main"
+          ],
+          [
+            "• Segno X: 18 match (31.0%) | Implicita Quota: 27.0% [+4.0%]",
+            "main"
+          ],
+          [
+            "• Segno 2: 34 match (58.6%) | Implicita Quota: 56.6% [+2.0%]",
+            "main"
+          ],
+          [
+            "",
+            null
+          ],
+          [
+            "INDICATORE DI ROTTURA DEL FAVORITO: 41.4% delle volte",
+            "main"
+          ],
+          [
+            "",
+            null
+          ],
+          [
+            "ULTIMI 5 MATCH STORICI REGISTRATI:",
+            "h"
+          ],
+          [
+            "[2026-03-02] Gil Vicente vs Benfica -> Esito: A",
+            "dim"
+          ],
+          [
+            "[2026-03-14] Panserraikos vs Aris -> Esito: D",
+            "dim"
+          ],
+          [
+            "[2026-03-17] Reggiana vs Monza -> Esito: D",
+            "dim"
+          ],
+          [
+            "[2026-04-06] Cheltenham vs Cambridge -> Esito: D",
+            "dim"
+          ],
+          [
+            "[2026-10-25] Udinese vs Milan -> Esito: A",
+            "dim"
+          ]
+        ],
+        "forma_summary": "Forma Ultime 5: Genoa (V-V-S-V-S, 9pt | Casa: 4V-1N-0P) • Juventus (S-V-P-S-V, 7pt | Trasf: 2V-1N-2P) • H2H 5 match: 1V Genoa, 0N, 4V Juventus",
+        "effective_quota": 3.5,
+        "esito_stato": "LOST",
+        "esito_testo": "❌ NON PRESO (2-0)",
+        "esito_css": "lost",
+        "status": "FINITA"
+      },
+      "EXOYeX7c": {
+        "id": "EXOYeX7c",
+        "sport": "Calcio",
+        "league": "ITALY: Serie A",
+        "league_sort_key": [
+          1,
+          10,
+          74
+        ],
+        "feed_order": 124,
+        "is_top": true,
+        "home": "Monza",
+        "away": "Napoli",
+        "time": "20:45",
+        "timestamp": 1793216700,
+        "status_code": "3",
+        "score": "1 : 4",
+        "odds": [
+          5.5,
+          4.33,
+          1.57
+        ],
+        "odds_str": "5.50 / 4.33 / 1.57",
+        "livello": "dim",
+        "raw_pick": "X2",
+        "pick_str": "🎯 X2 (39.6%)",
+        "pick_title": "DOPPIA CHANCE X2 (Copertura prudenziale)",
+        "summary_lines": [
+          "• 212 precedenti storici con pattern simile",
+          "• Equilibrio statistico: convergenza non netta sul solo esito pieno. • Forma Ultime 5: Monza (S-S-V-S-P, 4pt | Casa: 2V-0N-3P) • Napoli (V-P-V-S-S, 7pt | Trasf: 1V-1N-3P) • H2H 5 match: 0V Monza, 1N, 4V Napoli",
+          "• 1: 18.4% | X: 21.2% | 2: 60.4%",
+          "• Rottura Favorito (X o Ribaltone): 39.6%",
+          "• 📈 Forma Ultime 5: Monza (S-S-V-S-P, 4pt | Casa: 2V-0N-3P) • Napoli (V-P-V-S-S, 7pt | Trasf: 1V-1N-3P) • H2H 5 match: 0V Monza, 1N, 4V Napoli"
+        ],
+        "full_report": [
+          [
+            "PRONOSTICO STATISTICO: DOPPIA CHANCE X2 (Copertura prudenziale)",
+            [
+              "big",
+              "dim"
+            ]
+          ],
+          [
+            "Motivazione: Equilibrio statistico: convergenza non netta sul solo esito pieno. • Forma Ultime 5: Monza (S-S-V-S-P, 4pt | Casa: 2V-0N-3P) • Napoli (V-P-V-S-S, 7pt | Trasf: 1V-1N-3P) • H2H 5 match: 0V Monza, 1N, 4V Napoli",
+            "main"
+          ],
+          [
+            "Campione: 212 match storici analizzati",
+            "dim"
+          ],
+          [
+            "",
+            null
+          ],
+          [
+            "DISTRIBUZIONE EFFETTIVA RISCONTRATA:",
+            "h"
+          ],
+          [
+            "• Segno 1: 39 match (18.4%) | Implicita Quota: 17.3% [+1.1%]",
+            "main"
+          ],
+          [
+            "• Segno X: 45 match (21.2%) | Implicita Quota: 22.0% [-0.8%]",
+            "main"
+          ],
+          [
+            "• Segno 2: 128 match (60.4%) | Implicita Quota: 60.7% [-0.3%]",
+            "main"
+          ],
+          [
+            "",
+            null
+          ],
+          [
+            "INDICATORE DI ROTTURA DEL FAVORITO: 39.6% delle volte",
+            "main"
+          ],
+          [
+            "",
+            null
+          ],
+          [
+            "ULTIMI 5 MATCH STORICI REGISTRATI:",
+            "h"
+          ],
+          [
+            "[2026-08-15] Excelsior vs PSV Eindhoven -> Esito: A",
+            "dim"
+          ],
+          [
+            "[2026-08-22] For Sittard vs AZ Alkmaar -> Esito: A",
+            "dim"
+          ],
+          [
+            "[2026-10-03] Gateshead vs Worthing -> Esito: A",
+            "dim"
+          ],
+          [
+            "[2026-10-10] Montrose vs Ross County -> Esito: A",
+            "dim"
+          ],
+          [
+            "[2026-10-17] Union Berlin vs Dortmund -> Esito: D",
+            "dim"
+          ]
+        ],
+        "forma_summary": "Forma Ultime 5: Monza (S-S-V-S-P, 4pt | Casa: 2V-0N-3P) • Napoli (V-P-V-S-S, 7pt | Trasf: 1V-1N-3P) • H2H 5 match: 0V Monza, 1N, 4V Napoli",
+        "effective_quota": 1.15,
+        "esito_stato": "WIN",
+        "esito_testo": "✅ PRESO (1-4)",
+        "esito_css": "win",
+        "status": "FINITA"
+      },
+      "EJDd9P4m": {
+        "id": "EJDd9P4m",
+        "sport": "Calcio",
+        "league": "ITALY: Serie B",
+        "league_sort_key": [
+          2,
+          1,
+          75
+        ],
+        "feed_order": 125,
+        "is_top": false,
+        "home": "Pisa",
+        "away": "Palermo",
+        "time": "19:00",
+        "timestamp": 1793210400,
+        "status_code": "3",
+        "score": "3 : 3",
+        "odds": [
+          2.25,
+          3.3,
+          3.0
+        ],
+        "odds_str": "2.25 / 3.30 / 3.00",
+        "livello": "warn",
+        "raw_pick": "X2",
+        "pick_str": "🎯 X2 (60.5%)",
+        "pick_title": "DOPPIA CHANCE X2 (Trappola Favorito - Rottura anomala)",
+        "summary_lines": [
+          "• 1456 precedenti storici con pattern simile",
+          "• La favorita nominale fallisce nel 60.5% dei casi (Pareggio reale: 30.7%). • Forma Ultime 5: Pisa (P-P-V-V-S, 8pt | Casa: 2V-1N-2P) • Palermo (P-V-V-V-V, 13pt | Trasf: 3V-2N-0P) • H2H 5 match: 3V Pisa, 1N, 1V Palermo",
+          "• 1: 39.5% | X: 30.7% | 2: 29.8%",
+          "• Rottura Favorito (X o Ribaltone): 60.5%",
+          "• 📈 Forma Ultime 5: Pisa (P-P-V-V-S, 8pt | Casa: 2V-1N-2P) • Palermo (P-V-V-V-V, 13pt | Trasf: 3V-2N-0P) • H2H 5 match: 3V Pisa, 1N, 1V Palermo"
+        ],
+        "full_report": [
+          [
+            "PRONOSTICO STATISTICO: DOPPIA CHANCE X2 (Trappola Favorito - Rottura anomala)",
+            [
+              "big",
+              "warn"
+            ]
+          ],
+          [
+            "Motivazione: La favorita nominale fallisce nel 60.5% dei casi (Pareggio reale: 30.7%). • Forma Ultime 5: Pisa (P-P-V-V-S, 8pt | Casa: 2V-1N-2P) • Palermo (P-V-V-V-V, 13pt | Trasf: 3V-2N-0P) • H2H 5 match: 3V Pisa, 1N, 1V Palermo",
+            "main"
+          ],
+          [
+            "Campione: 1456 match storici analizzati",
+            "dim"
+          ],
+          [
+            "",
+            null
+          ],
+          [
+            "DISTRIBUZIONE EFFETTIVA RISCONTRATA:",
+            "h"
+          ],
+          [
+            "• Segno 1: 575 match (39.5%) | Implicita Quota: 41.1% [-1.6%]",
+            "main"
+          ],
+          [
+            "• Segno X: 447 match (30.7%) | Implicita Quota: 28.0% [+2.7%]",
+            "main"
+          ],
+          [
+            "• Segno 2: 434 match (29.8%) | Implicita Quota: 30.8% [-1.0%]",
+            "main"
+          ],
+          [
+            "",
+            null
+          ],
+          [
+            "INDICATORE DI ROTTURA DEL FAVORITO: 60.5% delle volte",
+            "warn"
+          ],
+          [
+            "",
+            null
+          ],
+          [
+            "ULTIMI 5 MATCH STORICI REGISTRATI:",
+            "h"
+          ],
+          [
+            "[2026-10-24] Stoke vs Bristol City -> Esito: D",
+            "dim"
+          ],
+          [
+            "[2026-10-24] Rotherham vs Shrewsbury -> Esito: D",
+            "dim"
+          ],
+          [
+            "[2026-10-25] Verona vs Pisa -> Esito: D",
+            "dim"
+          ],
+          [
+            "[2026-10-25] Albacete vs Eldense -> Esito: H",
+            "dim"
+          ],
+          [
+            "[2026-10-25] Gent vs Anderlecht -> Esito: H",
+            "dim"
+          ]
+        ],
+        "forma_summary": "Forma Ultime 5: Pisa (P-P-V-V-S, 8pt | Casa: 2V-1N-2P) • Palermo (P-V-V-V-V, 13pt | Trasf: 3V-2N-0P) • H2H 5 match: 3V Pisa, 1N, 1V Palermo",
+        "effective_quota": 1.57,
+        "esito_stato": "WIN",
+        "esito_testo": "✅ PRESO (3-3)",
+        "esito_css": "win",
+        "status": "FINITA"
+      },
+      "tGx0v55D": {
+        "id": "tGx0v55D",
+        "sport": "Calcio",
+        "league": "ITALY: Serie B",
+        "league_sort_key": [
+          2,
+          1,
+          75
+        ],
+        "feed_order": 126,
+        "is_top": false,
+        "home": "Carrarese",
+        "away": "Arezzo",
+        "time": "20:00",
+        "timestamp": 1793214000,
+        "status_code": "3",
+        "score": "2 : 1",
+        "odds": [
+          1.8,
+          3.4,
+          4.5
+        ],
+        "odds_str": "1.80 / 3.40 / 4.50",
+        "livello": "dim",
+        "raw_pick": "1X",
+        "pick_str": "🎯 1X (46.6%)",
+        "pick_title": "DOPPIA CHANCE 1X (Copertura prudenziale)",
+        "summary_lines": [
+          "• 1380 precedenti storici con pattern simile",
+          "• Equilibrio statistico: convergenza non netta sul solo esito pieno. • Forma Ultime 5: Carrarese (V-S-V-V-S, 9pt | Casa: 2V-0N-3P) • Arezzo (S-S-V-P-S, 4pt | Trasf: 2V-0N-3P) • H2H 5 match: 3V Carrarese, 1N, 1V Arezzo",
+          "• 1: 53.4% | X: 26.5% | 2: 20.1%",
+          "• Rottura Favorito (X o Ribaltone): 46.6%",
+          "• 📈 Forma Ultime 5: Carrarese (V-S-V-V-S, 9pt | Casa: 2V-0N-3P) • Arezzo (S-S-V-P-S, 4pt | Trasf: 2V-0N-3P) • H2H 5 match: 3V Carrarese, 1N, 1V Arezzo"
+        ],
+        "full_report": [
+          [
+            "PRONOSTICO STATISTICO: DOPPIA CHANCE 1X (Copertura prudenziale)",
+            [
+              "big",
+              "dim"
+            ]
+          ],
+          [
+            "Motivazione: Equilibrio statistico: convergenza non netta sul solo esito pieno. • Forma Ultime 5: Carrarese (V-S-V-V-S, 9pt | Casa: 2V-0N-3P) • Arezzo (S-S-V-P-S, 4pt | Trasf: 2V-0N-3P) • H2H 5 match: 3V Carrarese, 1N, 1V Arezzo",
+            "main"
+          ],
+          [
+            "Campione: 1380 match storici analizzati",
+            "dim"
+          ],
+          [
+            "",
+            null
+          ],
+          [
+            "DISTRIBUZIONE EFFETTIVA RISCONTRATA:",
+            "h"
+          ],
+          [
+            "• Segno 1: 737 match (53.4%) | Implicita Quota: 51.8% [+1.6%]",
+            "main"
+          ],
+          [
+            "• Segno X: 366 match (26.5%) | Implicita Quota: 27.4% [-0.9%]",
+            "main"
+          ],
+          [
+            "• Segno 2: 277 match (20.1%) | Implicita Quota: 20.7% [-0.7%]",
+            "main"
+          ],
+          [
+            "",
+            null
+          ],
+          [
+            "INDICATORE DI ROTTURA DEL FAVORITO: 46.6% delle volte",
+            "warn"
+          ],
+          [
+            "",
+            null
+          ],
+          [
+            "ULTIMI 5 MATCH STORICI REGISTRATI:",
+            "h"
+          ],
+          [
+            "[2026-10-18] Udinese vs Lecce -> Esito: A",
+            "dim"
+          ],
+          [
+            "[2026-10-24] Cremonese vs Juve Stabia -> Esito: A",
+            "dim"
+          ],
+          [
+            "[2026-10-24] Estrela vs Casa Pia -> Esito: A",
+            "dim"
+          ],
+          [
+            "[2026-10-24] Sheffield United vs Derby -> Esito: D",
+            "dim"
+          ],
+          [
+            "[2026-10-25] Sabadell vs Tenerife -> Esito: D",
+            "dim"
+          ]
+        ],
+        "forma_summary": "Forma Ultime 5: Carrarese (V-S-V-V-S, 9pt | Casa: 2V-0N-3P) • Arezzo (S-S-V-P-S, 4pt | Trasf: 2V-0N-3P) • H2H 5 match: 3V Carrarese, 1N, 1V Arezzo",
+        "effective_quota": 1.18,
+        "esito_stato": "WIN",
+        "esito_testo": "✅ PRESO (2-1)",
+        "esito_css": "win",
+        "status": "FINITA"
+      },
+      "4hGHdnLs": {
+        "id": "4hGHdnLs",
+        "sport": "Calcio",
+        "league": "ITALY: Serie B",
+        "league_sort_key": [
+          2,
+          1,
+          75
+        ],
+        "feed_order": 127,
+        "is_top": false,
+        "home": "Juve Stabia",
+        "away": "Verona",
+        "time": "20:00",
+        "timestamp": 1793214000,
+        "status_code": "3",
+        "score": "0 : 1",
+        "odds": [
+          3.1,
+          3.2,
+          2.25
+        ],
+        "odds_str": "3.10 / 3.20 / 2.25",
+        "livello": "dim",
+        "raw_pick": "X2",
+        "pick_str": "🎯 X2 (57.7%)",
+        "pick_title": "DOPPIA CHANCE X2 (Copertura prudenziale)",
+        "summary_lines": [
+          "• 1008 precedenti storici con pattern simile",
+          "• Equilibrio statistico: convergenza non netta sul solo esito pieno. • Forma Ultime 5: Juve Stabia (S-V-V-P-P, 8pt | Casa: 2V-1N-2P) • Verona (V-P-P-S-V, 8pt | Trasf: 3V-0N-2P) • H2H 5 match: 0V Juve Stabia, 0N, 5V Verona",
+          "• 1: 29.7% | X: 28.1% | 2: 42.3%",
+          "• Rottura Favorito (X o Ribaltone): 57.7%",
+          "• 📈 Forma Ultime 5: Juve Stabia (S-V-V-P-P, 8pt | Casa: 2V-1N-2P) • Verona (V-P-P-S-V, 8pt | Trasf: 3V-0N-2P) • H2H 5 match: 0V Juve Stabia, 0N, 5V Verona"
+        ],
+        "full_report": [
+          [
+            "PRONOSTICO STATISTICO: DOPPIA CHANCE X2 (Copertura prudenziale)",
+            [
+              "big",
+              "dim"
+            ]
+          ],
+          [
+            "Motivazione: Equilibrio statistico: convergenza non netta sul solo esito pieno. • Forma Ultime 5: Juve Stabia (S-V-V-P-P, 8pt | Casa: 2V-1N-2P) • Verona (V-P-P-S-V, 8pt | Trasf: 3V-0N-2P) • H2H 5 match: 0V Juve Stabia, 0N, 5V Verona",
+            "main"
+          ],
+          [
+            "Campione: 1008 match storici analizzati",
+            "dim"
+          ],
+          [
+            "",
+            null
+          ],
+          [
+            "DISTRIBUZIONE EFFETTIVA RISCONTRATA:",
+            "h"
+          ],
+          [
+            "• Segno 1: 299 match (29.7%) | Implicita Quota: 29.9% [-0.2%]",
+            "main"
+          ],
+          [
+            "• Segno X: 283 match (28.1%) | Implicita Quota: 28.9% [-0.9%]",
+            "main"
+          ],
+          [
+            "• Segno 2: 426 match (42.3%) | Implicita Quota: 41.2% [+1.1%]",
+            "main"
+          ],
+          [
+            "",
+            null
+          ],
+          [
+            "INDICATORE DI ROTTURA DEL FAVORITO: 57.7% delle volte",
+            "warn"
+          ],
+          [
+            "",
+            null
+          ],
+          [
+            "ULTIMI 5 MATCH STORICI REGISTRATI:",
+            "h"
+          ],
+          [
+            "[2026-10-24] Arezzo vs Benevento -> Esito: A",
+            "dim"
+          ],
+          [
+            "[2026-10-24] Leganes vs Mallorca -> Esito: D",
+            "dim"
+          ],
+          [
+            "[2026-10-25] Celta vs Betis -> Esito: D",
+            "dim"
+          ],
+          [
+            "[2026-10-25] Sunderland vs Leeds -> Esito: D",
+            "dim"
+          ],
+          [
+            "[2026-10-25] Angers vs Lorient -> Esito: D",
+            "dim"
+          ]
+        ],
+        "forma_summary": "Forma Ultime 5: Juve Stabia (S-V-V-P-P, 8pt | Casa: 2V-1N-2P) • Verona (V-P-P-S-V, 8pt | Trasf: 3V-0N-2P) • H2H 5 match: 0V Juve Stabia, 0N, 5V Verona",
+        "effective_quota": 1.32,
+        "esito_stato": "WIN",
+        "esito_testo": "✅ PRESO (0-1)",
+        "esito_css": "win",
+        "status": "FINITA"
+      }
+    },
+    "Schedina Test Sabato": {}
+  }
+}
