@@ -2821,7 +2821,7 @@ def render_mobile_html():
         }}
 
         async function importaCodiceSchedine() {{
-            const code = prompt('Incolla qui il codice schedine copiato dal PC o dall\'altra app:');
+            const code = prompt("Incolla qui il codice schedine copiato dal PC o dall'altra app:");
             if (!code || !code.trim()) return;
             try {{
                 const jsonStr = decodeURIComponent(escape(atob(code.trim())));
